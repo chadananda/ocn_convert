@@ -69,15 +69,16 @@ Examples of the above may be found below:
 ## Blockquotes
 
 Blockquotes may be obtained in three ways:
+
 1. ~~By prefixing each line of the blockquote with the > character. This is 
-  standard markdown, and allows for the greatest portability. Nested
-  blockquotes may be obtained by using multiple >> characters.~~
+    standard markdown, and allows for the greatest portability. Nested
+    blockquotes may be obtained by using multiple >> characters.~~
 2. ~~By prefixing each line with four spaces. This looks better if one is reading
-  the document in plain text as opposed to a markdown viewer, but in non-Ocean
-  markdown such a block will appear as preformatted (fixed width) text. Nested
-  blockquotes may be obtained by prefixing lines with eight spaces.~~
+    the document in plain text as opposed to a markdown viewer, but in non-Ocean
+    markdown such a block will appear as preformatted (fixed width) text. Nested
+    blockquotes may be obtained by prefixing lines with eight spaces.~~
 3. By appending the `{.blockquote}` attribute to the end of the block. This may
-  be the easiest way to delineate blockquotes.
+    be the easiest way to delineate blockquotes.
 
 
     O CHILDREN OF MEN! {.blockquote .sit}
@@ -93,6 +94,18 @@ Blockquotes may be obtained in three ways:
 ## Fixed-width / Preformatted Text
 
 
+
+## Lists
+
+Lists may be obtained in three ways:
+
+1. For a numbered list, each item is prefixed by a number and a period, e.g. 
+    "`1. ` ".
+2. For a bulleted list, each item is prefixed by either `*` or `+`
+    * Nested lists are indented before the prefix
+    * Bulleted lists can be nested inside of numbered Lists
+3. Lists may simply be multiple lines of text with the {.list} or {.verse}
+    attribute. However, such lists will not be numbered or bulleted.
 
 ## Headers
 
