@@ -1,0 +1,20 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Ocean Markdown Demo",
+      "type": "shell",
+      "command": "open",
+      "args": [
+        "${workspaceFolder}/sample.html"
+      ],
+      "presentation": {
+        "reveal": "never",
+        "echo": false,
+        "panel": "shared",
+      }
+    }
+  ]
+}

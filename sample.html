@@ -1,0 +1,120 @@
+<script src="https://chadananda.github.io/ilm-md/dist/ilm-md-inline-debug.js"></script>
+# Ocean Markdown {.title}
+## a demonstration {.subtitle}
+
+by David Hunt {.author}
+
+========
+
+This demonstration of Ocean Markdown format is written for the 
+[Ocean Convert library](https://github.com/chadananda/ocn_convert).
+{.noid}
+
+## Inline elements
+| Display | Markdown |
+| :------ | :------- |
+| **bold text** | ```**bold text**``` |
+| _italic text_ | ```_italic text_``` |
+| ~~strikethrough~~ | ```~~strikethrough~~``` |
+| [link](https://github.com/chadananda/ocn_convert) | ```[link](https://github.com/chadananda/ocn_convert)``` |
+
+## Blocks
+
+A **block** of text is the most common element. Text blocks include 
+paragraphs and blockquotes, as well as preformatted text like poems and lists.
+Multiple lines will be concatenated into a single block provided:
+- there is no empty line separating two lines
+- the line does not start with a markdown symbol
+  - `*`, `-`, or `+` for list items
+  - `#` for headers
+  - ~~`>` for blockquotes~~
+
+Blocks may have attributes listed at the end of the block within brackets.
+The following attributes are explicitly supported for text blocks:
+- `{.dropcap}`: the first character will be a dropcap.
+- `{.blockquote}`: the entire block will be treated as a blockquote.
+- `{.center}`: the block will be centered.
+- `{.right}`: the block will be aligned to the right.
+- `{.list}`: lines will **not** be concatenated as usual.
+- `{.verse}`: lines will not be concatenated, and spacing will be respected.
+- `{.ed}` or `{.editor}`: the editor of the document.
+- `{.sig}` or `{.signature}`: a signature line after a letter.
+- `{.sit}`, `{.exh}` or `{.exhortation}`: the unnumbered line, often rendered
+  in italics, at the beginning of prayers or letters that have been translated
+  from eastern languages.
+- `{.noid}`: a paragraph that does not receive a number.
+
+Examples of the above may be found below:
+
+**dropcap** {.noid}
+
+**blockquote** {.noid}
+
+**center** {.noid}
+
+**right** {.noid}
+
+**list** {.noid}
+
+**verse** {.noid}
+
+**editor** {.noid}
+
+**signature** {.noid}
+
+**exhortation** {.noid}
+
+**noid** {.noid}
+
+## Blockquotes
+
+Blockquotes may be obtained in three ways:
+1. ~~By prefixing each line of the blockquote with the > character. This is 
+  standard markdown, and allows for the greatest portability. Nested
+  blockquotes may be obtained by using multiple >> characters.~~
+2. ~~By prefixing each line with four spaces. This looks better if one is reading
+  the document in plain text as opposed to a markdown viewer, but in non-Ocean
+  markdown such a block will appear as preformatted (fixed width) text. Nested
+  blockquotes may be obtained by prefixing lines with eight spaces.~~
+3. By appending the `{.blockquote}` attribute to the end of the block. This may
+  be the easiest way to delineate blockquotes.
+
+
+    O CHILDREN OF MEN! {.blockquote .sit}
+
+    Know ye not why We created you all from the same dust? That no one should
+    exalt himself over the other. Ponder at all times in your hearts how ye were
+    created. Since we have created you all from one same substance, it is 
+    incumbant on you to be even as one soul, to walk with the same feet, eat with
+    the same mouth, and dwell in the same land... {.blockquote}
+
+    Baha'u'llah {.blockquote .cite}
+
+## Fixed-width / Preformatted Text
+
+
+
+## Headers
+
+
+
+## Horizontal Rules
+
+
+
+## Footnotes
+
+
+
+## Paragraph numbers
+
+
+
+## Page numbers
+
+
+
+## Tables
+
+
+
