@@ -1,17 +1,21 @@
 const bahaiAutocorrect = require('bahai-autocorrect').correct
 const defaults = {
+  fnMarker: {
+
+  },
+  fnReplacement: 
   headersCentered: true,
   // headersRepeated: false,
   // doubleSpaced: false,
   // encoding: 'utf-8',
   pageMarker: {
-    '|PPage_{}': '<p{}>',
-    '<p{}>': '<p{}>',
-    '+P{}': '<p{}>',
-    '+p': '<p>',
-    '+P': '<p>',
+    '|PPage_{}': '[pg {}]',
+    '<p{}>': '[pg {}]',
+    '+P{}': '[pg {}]',
+    '+p': '[pg]',
+    '+P': '[pg]',
   },
-  pageMarkerReplacement: '<p{}>',
+  pageMarkerReplacement: '[pg {}]',
   pageMarkersInText: false,
   pIndent: false,
   pIndentFirst: new RegExp(' {1,4}'),
@@ -22,7 +26,7 @@ const defaults = {
 }
 
 function escRegex(t) {
-  return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return (t.match(/^\/.+\/$/) ? t.replace(/^\/(.+)\/$/, '$1') : t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 }
 
 class TextToMarkdown {
