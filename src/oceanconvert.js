@@ -35,6 +35,18 @@ const args = require('minimist')(process.argv.slice(2), {
   }
 })
 
+if (args.a) {
+  try {
+    sh.ln('-s', __filename, '/usr/local/bin/oceanconvert')
+    console.log('The oceanconvert script is now linked.')
+    process.exit(0)
+  }
+  catch(e) {
+    console.error(e.message)
+    process.exit(1)
+  }
+}
+
 if (args.help || args.h || args['?'] || !args._[0]) {
   console.log(`
 Usage: ocean-convert [options] inputFile [inputFile...]
