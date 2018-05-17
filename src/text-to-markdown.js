@@ -67,7 +67,7 @@ class TextToMarkdown {
       doctype: '',
       status: '',
       encumbered: false,
-      collection: '''
+      collection: ''
     }
     this.opts = Object.assign(defaults, opts)
     if (typeof(this.opts.pageMarker) === "string") {
