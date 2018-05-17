@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const TextToMarkdown = require('./text-to-markdown')
+const fs = require('fs')
 const path = require('path')
 const sh = require('shelljs')
 const args = require('minimist')(process.argv.slice(2), {
@@ -101,21 +103,89 @@ Output options:
 
 const opts = Object.assign({
   inputFiles: args._.map(f => path.resolve(process.cwd(), f)),
-}, args, {['_']: null})
+}, args, {_: null})
 
-try {
-  if (!sh.test("-f", opts.inputFile)) {
-    throw new Error(`inputFile does not exist.`)
+// TODO: set up some variables here
+if (opts.o) opts.o = path.resolve(__dirname + '/../output')
+if (opts.p) opts.p = path.resolve(process.dirname, opts.p)
+
+// TODO: basic error checking here
+
+
+for (filePath of opts.inputFiles) {
+  try {
+    // Check if the file exists, or continue
+    if (!sh.test('-f', filePath)) {
+      console.error(`Error: ${filePath} does not exist, skipping...`)
+    }
+    // Load the file into memory
+    let text = fs.readFileSync(filePath)
+    // Create a new TextToMarkdown converter
+    let doc = new TextToMarkdown(text, opts)
+    // Convert the text
+    doc.convert()
+    // Add metadata if necessary
+    doc.meta.convertedFrom = filePath
+    if (opts.e) {
+      Object.assign(doc.meta, extractMeta(filePath))
+    }
+    // Save the file
+    writeFile(filePath, doc)
   }
-  
-  if (opts.outputFile !== '-' && !sh.test("-f", opts.outputFile)) {
-    throw new Error (`outputFile does not exist.`)
+  catch(e) {
+    if (!opts.d) {
+      console.error(`Error converting ${filePath}: ${e.message}`)
+    }
+    else {
+      console.error(`Error converting ${filePath}:\n${e}`)
+    }
   }
 }
-catch(e) {
-  if (!opts.d) {
-    console.error(`Error: ${e.message}`)
-    process.exit(1)
+
+function extractMeta(filePath) {
+  let m = path.basename(filePath).match(/^(.+?),(.+)\.[^\.]+$/)
+  if (m.length > 2) {
+    return {
+      author: m[1],
+      title: m[2],
+    }
   }
-  throw e
+  else {
+    return {
+      author: path.dirname(filePath),
+      title: path.basename(filePath, path.extname(filePath)),
+    }
+  }
+}
+
+/**
+ * Outputs a file to disk or stdout
+ * @param {string} filePath
+ * The full path of the file to write
+ * @param {TextToMarkdown} doc
+ * The converted object to write to the file 
+ */
+function writeFile(filePath, doc) {
+  // If this is a reconversion
+  if (opts.r && path.extname(filePath) === 'md' && doc.meta.hasOwnProperty(convertedFrom)) {
+    fs.writeFileSync(filePath, doc)
+    return
+  }
+  // If we should save to --path
+  else if (opts.p) {
+    fs.writeFileSync(opts.p + '/' + path.basename(filePath, '.' + path.extname(filePath)) + '.md', doc)
+  }
+  // If we should save to the default output folder owing to --outputFiles
+  else if (opts.o) {
+    fs.writeFileSync(opts.o + '/' + path.basename(filePath, '.' + path.extname(filePath)) + '.md', doc)
+  }
+  // If we should save to the same folder owing to --sameFolder
+  else if (opts.s) {
+    fs.writeFileSync(filePath + '.md', doc)
+  }
+  // If no file argument is selected, write to stdout
+  else {
+    console.log(doc)
+  }
+  throw new Error(`Error #126: Developer malfunction in function writeFile(${filePath})`)
 }
