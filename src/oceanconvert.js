@@ -10,7 +10,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'headersCentered',
     'pageMarkersInText',
     'pNumbers',
-    'p',
+    'o',
     'r',
     's',
   ],
@@ -30,10 +30,19 @@ const args = require('minimist')(process.argv.slice(2), {
     'p',
   ],
   alias: { 
+    addLink: 'a',
     debug: 'd',
-    reconvert: 'r'
+    extractMeta: 'e',
+    outputFiles: 'o',
+    path: 'p',
+    reconvert: 'r',
+    sameFolder: 's',
   }
 })
+
+if (args.d) {
+  console.log(args)
+}
 
 if (args.a) {
   try {
@@ -89,11 +98,6 @@ Output options:
 const opts = Object.assign({
   inputFiles: args._.map(f => path.resolve(process.cwd(), f)),
 }, args, {['_']: null})
-
-
-if (opts.d) {
-  console.log(opts)
-}
 
 try {
   if (!sh.test("-f", opts.inputFile)) {
