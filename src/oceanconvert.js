@@ -44,10 +44,10 @@ const args = require('minimist')(process.argv.slice(2), {
   }
 })
 
-if (args.d || args.D) {
+if (args.D) {
   console.log(Object.assign({inputFiles: args._}, args, {_: null}))
+  process.exit(0)
 }
-if (args.D) process.exit(0)
 
 if (args.a) {
   try {
@@ -105,9 +105,13 @@ const opts = Object.assign({
   inputFiles: args._.map(f => path.resolve(process.cwd(), f)),
 }, args, {_: null})
 
-// TODO: set up some variables here
+// Assign some variables here
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.dirname, opts.p)
+
+if (args.d) {
+  console.log(opts)
+}
 
 // TODO: basic error checking here
 
@@ -119,7 +123,7 @@ for (filePath of opts.inputFiles) {
       console.error(`Error: ${filePath} does not exist, skipping...`)
     }
     // Load the file into memory
-    let text = fs.readFileSync(filePath)
+    let text = fs.readFileSync(filePath, {encoding: 'UTF-8'})
     // Create a new TextToMarkdown converter
     let doc = new TextToMarkdown(text, opts)
     // Convert the text
@@ -137,7 +141,7 @@ for (filePath of opts.inputFiles) {
       console.error(`Error converting ${filePath}: ${e.message}`)
     }
     else {
-      console.error(`Error converting ${filePath}:\n${e}`)
+      throw e
     }
   }
 }
@@ -174,18 +178,22 @@ function writeFile(filePath, doc) {
   // If we should save to --path
   else if (opts.p) {
     fs.writeFileSync(opts.p + '/' + path.basename(filePath, '.' + path.extname(filePath)) + '.md', doc)
+    return
   }
   // If we should save to the default output folder owing to --outputFiles
   else if (opts.o) {
     fs.writeFileSync(opts.o + '/' + path.basename(filePath, '.' + path.extname(filePath)) + '.md', doc)
+    return
   }
   // If we should save to the same folder owing to --sameFolder
   else if (opts.s) {
     fs.writeFileSync(filePath + '.md', doc)
+    return
   }
   // If no file argument is selected, write to stdout
   else {
     console.log(doc)
+    return
   }
-  throw new Error(`Error #126: Developer malfunction in function writeFile(${filePath})`)
+  throw new Error(`Developer malfunction in function writeFile(${filePath})`)
 }

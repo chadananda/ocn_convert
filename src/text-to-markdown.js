@@ -1,4 +1,4 @@
-const bahaiAutocorrect = require('bahai-autocorrect').correct
+const bac = require('bahai-autocorrect')
 const matter = require('gray-matter')
 const defaults = {
 
@@ -89,8 +89,8 @@ TextToMarkdown.prototype.pageMarkerRegExp = function(s) {
 }
 
 TextToMarkdown.prototype.convert = function() {
-  this.text = bahaiAutocorrect(this.text)
-  
+  this.text = this.raw
+  this.text = bac.correct(this.text)
 }
 
 TextToMarkdown.prototype._parseFrontMatter = function() {
