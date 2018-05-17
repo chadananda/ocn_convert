@@ -1,25 +1,39 @@
 const bahaiAutocorrect = require('bahai-autocorrect').correct
+const matter = require('gray-matter')
 const defaults = {
-  fnMarker: {
 
+  // Footnotes
+  fnRefPattern: {
+    '/\[([-A-Za-z0-9]+)\]/': '[^\1]',
+    '+F(\d+)': '[^\1]'
   },
-  fnReplacement: 
+  fnRefReplacement: '[^{}]',
+  fnTextPattern: {
+    '/\[([-A-Za-z0-9]+)\. (.+)/': ''
+  },
+  fnTextReplacement: '[^{}]: ',
+
+  // Headers
   headersCentered: true,
-  // headersRepeated: false,
-  // doubleSpaced: false,
-  // encoding: 'utf-8',
+
+  // Page Numbers
+  pageFirstNumber: false,
   pageMarker: {
-    '|PPage_{}': '[pg {}]',
-    '<p{}>': '[pg {}]',
-    '+P{}': '[pg {}]',
-    '+p': '[pg]',
-    '+P': '[pg]',
+    '|PPage_{}': '[pg \1]',
+    '<p{}>': '[pg \1]',
+    '+P{}': '[pg \1]',
+    '+p': '[pg ]',
+    '+P': '[pg ]',
   },
-  pageMarkerReplacement: '[pg {}]',
+  pageMarkerReplacement: '[pg \1]',
   pageMarkersInText: false,
+
+  // Paragraphs
   pIndent: false,
   pIndentFirst: new RegExp(' {1,4}'),
   pNumbers: false,
+
+  // Blockquotes
   qIndent: new RegExp(' {5,8}'),
   qIndentFirst: new RegExp(' {5,8}'),
 
@@ -42,7 +56,19 @@ class TextToMarkdown {
    * --pageMarker (string): the pattern of page markers in the document
    */
   constructor(text, opts = {}) {
+    this.raw = text
     this.text = text
+    this.meta = {
+      title: '',
+      author: '',
+      language: '',
+      source: '',
+      date: '',
+      doctype: '',
+      status: '',
+      encumbered: false,
+      collection: '''
+    }
     this.opts = Object.assign(defaults, opts)
     if (typeof(this.opts.pageMarker) === "string") {
       this.opts.pageMarker = Object.assign({[this.opts.pageMarker]: this.opts.pageMarkerReplacement })
@@ -65,8 +91,16 @@ TextToMarkdown.prototype.pageMarkerRegExp = function(s) {
 TextToMarkdown.prototype.convert = function() {
   this.text = bahaiAutocorrect(this.text)
   
-  if (this.headersCentered) {
-    this.text = this.text.replace(/^\s{13,}/g, '### ')
-  }
-
 }
+
+TextToMarkdown.prototype._parseFrontMatter = function() {
+  let o = matter(this.raw)
+  this.meta = o.data
+  this.text = o.content
+}
+
+TextToMarkdown.prototype.toString = function() {
+  return matter.stringify(this.text, this.meta)
+}
+
+module.exports = TextToMarkdown;
