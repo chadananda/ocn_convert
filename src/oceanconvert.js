@@ -6,6 +6,7 @@ const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
     'd',
+    'D',
     'e',
     'headersCentered',
     'pageMarkersInText',
@@ -32,6 +33,7 @@ const args = require('minimist')(process.argv.slice(2), {
   alias: { 
     addLink: 'a',
     debug: 'd',
+    debugOnly: 'D',
     extractMeta: 'e',
     outputFiles: 'o',
     path: 'p',
@@ -40,9 +42,10 @@ const args = require('minimist')(process.argv.slice(2), {
   }
 })
 
-if (args.d) {
-  console.log(args)
+if (args.d || args.D) {
+  console.log(Object.assign({inputFiles: args._}, args, {_: null}))
 }
+if (args.D) process.exit(0)
 
 if (args.a) {
   try {
@@ -65,6 +68,7 @@ inputFile: file path to convert
 General options:
 --addLink, -a         add a symlink to your /usr/local/bin directory
 --debug, -d           show debugging information if errors occur (false)
+--debugOnly, -D       just show the debugging info and exit
 --extractMeta, -e     extract metadata from the filename, in the format
                       {author},{title}.ext or {author}/{title}.ext
 
