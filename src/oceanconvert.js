@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 
+const path = require('path')
+const sh = require('shelljs')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
+    'a',
     'd',
+    'e',
     'headersCentered',
     'pageMarkersInText',
     'pNumbers',
+    'p',
     'r',
     's',
   ],
   string: [
+    'fnRefPattern',
+    'fnRefReplacement',
+    'fnTextPattern',
+    'fnTextReplacement',
     'pageMarker',
     'pageReplacement',
     'pIndent',
@@ -18,15 +27,13 @@ const args = require('minimist')(process.argv.slice(2), {
     'qIndentFirst',
     'qBefore',
     'qAfter',
-    'o',
+    'p',
   ],
   alias: { 
     debug: 'd',
     reconvert: 'r'
   }
 })
-const path = require('path')
-const sh = require('shelljs')
 
 if (args.help || args.h || args['?'] || !args._[0]) {
   console.log(`
@@ -34,8 +41,17 @@ Usage: ocean-convert [options] inputFile [inputFile...]
 
 inputFile: file path to convert
 
-options:
+General options:
+--addLink, -a         add a symlink to your /usr/local/bin directory
 --debug, -d           show debugging information if errors occur (false)
+--extractMeta, -e     extract metadata from the filename, in the format
+                      {author},{title}.ext or {author}/{title}.ext
+
+Conversion options:
+--fnRefPattern
+--fnRefReplacement
+--fnTextPattern
+--fnTextReplacement   
 --headersCentered     parse centered lines as headers (true)
 --pageMarker          how page markers are defined in the file, e.g. '+P{}'
 --pageReplacement     replacement pattern for page markers, e.g. '<p{}>'
@@ -47,8 +63,11 @@ options:
 --qIndentFirst        string at start of first line of a quote (5-8 spaces)
 --qBefore             string before a quote
 --qAfter              string after a quote
+
+Output options:
+--outputFiles, -o     output files to ocn_convert/output
+--path, -p            output files to path
 --reconvert, -r       redo conversion of inputFile using metadata (false)
---outputPath, -o      path to output files
 --sameFolder, -s      save output as .md file in same folder as inputFile
 
 `)
