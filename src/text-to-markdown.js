@@ -35,12 +35,12 @@ const defaults = {
 
   // Paragraphs
   pIndent: false,
-  pIndentFirst: new RegExp(' {1,4}'),
+  pIndentFirst: "/(?: {1,4}|\t)/",
   pNumbers: false,
 
   // Blockquotes
-  qIndent: new RegExp(' {5,8}'),
-  qIndentFirst: new RegExp(' {5,8}'),
+  qIndent: "/(?: {1,4}|\t)/",
+  qIndentFirst: false,
 
 }
 
@@ -108,8 +108,19 @@ class TextToMarkdown {
 TextToMarkdown.prototype.convert = function() {
   this.text = this.raw
   this.text = bac.correct(this.text)
+
   if (this.opts.pIndent) {
-    this.text = this.text.replace(this._toRegExp(this.opts.pIndent.replace(/^(\/?)\^?/, '$1^')), '')
+    this.text = this.text.replace(this._toRegExp(this.opts.pIndent, '^'), '')
+  }
+  if (this.opts.pIndentFirst) {
+    this.text = this.text.replace(this._toRegExp(this.opts.pIndentFirst, '^'), '\n')
+  }
+
+  if (this.opts.qIndent) {
+    this.text = this.text.replace(this._toRegExp(this.opts.qIndent, '^'), '> ')
+  }
+  if (this.opts.qIndentFirst) {
+    this.text = this.text.replace(this._toRegExp(this.opts.qIndentFirst, '^'), '\n> ')
   }
 
   for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns]) {
@@ -118,8 +129,10 @@ TextToMarkdown.prototype.convert = function() {
 
 }
 
-TextToMarkdown.prototype._toRegExp = function(s) {
+TextToMarkdown.prototype._toRegExp = function(s, pre = '', post = '') {
+  // Get regex string
   let r = s.match(/^\/(.+)\/([gim]*)$/)
+  // Get pattern and options
   let p = ''
   let o = 'gm'
   if (r) {
@@ -130,6 +143,7 @@ TextToMarkdown.prototype._toRegExp = function(s) {
     p = escRegex(s)
     p = p.replace('\\{pg\\}', '([0-9MCLXVImclxvi]+)').replace('\\{fn\\}', '([-A-Za-z0-9]+)').replace('\\{\\*\\}', '(.+)')
   }
+  p = pre + p + post
   return new RegExp(p, o)
 }
 
