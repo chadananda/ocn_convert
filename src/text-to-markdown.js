@@ -34,13 +34,23 @@ const defaults = {
   pgInText: false,
 
   // Paragraphs
-  pIndent: false,
-  pIndentFirst: "/(?: {1,4}|\t)/",
+  pIndent: [
+  ],
+  pIndentFirst: [
+    '\t',
+    '/ {1,4}(?! )/',
+    '/\\.{5}(?!\\.) ?/'
+  ],
   pNumbers: false,
 
   // Blockquotes
-  qIndent: "/(?: {1,4}|\t)/",
-  qIndentFirst: false,
+  qIndent: [
+    '/(?: {1,4}|\t)/',
+    '/\\.{5}(?!\\.) ?/'
+  ],
+  qIndentFirst: [
+    '/\\.{10}(?!\\.) ?/'
+  ],
 
 }
 
@@ -61,12 +71,16 @@ class TextToMarkdown {
    * --pageMarker (string): the pattern of page markers in the document
    */
   constructor(text, opts = {}, meta = {}) {
+
+    // Set up basic properties
     this.raw = text
     this.text = text
     this.fnPatterns = []
     this.pgPatterns = []
     this.chPatterns = []
     this.miscPatterns = []
+
+    // Set up meta property
     this.meta = Object.assign({
       title: '',
       author: '',
@@ -79,17 +93,24 @@ class TextToMarkdown {
       collection: '',
       _conversionOpts: {},
     }, matter(this.raw).data || {}, meta)
+
+    // Include all options from command parameters
     Object.keys(opts).forEach(function(k) {
       if (defaults.hasOwnProperty(k)) this.meta._conversionOpts[k] = opts[k]
     }.bind(this))
-    
+
+    // Include all misc patterns from file header
     Object.keys(this.meta._conversionOpts.miscPatterns || {}).forEach(function(k) {
       this.miscPatterns.push({
         pattern: this._toRegExp(k),
         replacement: this.meta._conversionOpts.miscPatterns[k]
       })
     }.bind(this))
+
+    // Set opts from conversion options
     this.opts = Object.assign(defaults, this.meta._conversionOpts)
+
+    // Set up pattern arrays for footnotes, pages, chapters
     for (let o of ['fnRef', 'fnText', 'pg', 'ch']) {
       let prop = o.substr(0,2) + 'Patterns'
       let opt = o + 'Pattern'
@@ -110,6 +131,8 @@ class TextToMarkdown {
         }
       }
     }
+
+    // Log the current object if debugging
     if (opts.d) {
       console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',text: this.text.length + ' chars'}))
     }
@@ -124,29 +147,30 @@ TextToMarkdown.prototype.convert = function() {
   this.text = this.text.replace(/\r\n/gm, '\n').replace(/\r/gm,'')
 
   // Handle paragraphs
-  if (this.opts.pIndent) {
-    this.text = this.text.replace(this._toRegExp(this.opts.pIndent, '^'), '')
-  }
-  if (this.opts.pIndentFirst) {
-    this.text = this.text.replace(this._toRegExp(this.opts.pIndentFirst, '^'), '\n')
-  }
-
-  // Handle blockquotes
-  if (this.opts.qIndent) {
-    this.text = this.text.replace(this._toRegExp(this.opts.qIndent, '^'), '> ')
-  }
-  if (this.opts.qIndentFirst) {
-    this.text = this.text.replace(this._toRegExp(this.opts.qIndentFirst, '^'), '\n> ')
-  }
+  this._replaceAll('pIndent', '', '^')
+  this._replaceAll('pIndentFirst', '\n', '^')
 
   // Handle chapters, footnotes, and pages
   for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns, ...this.miscPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
 
+  // Handle blockquotes
+  this._replaceAll('qIndent', '> ', '^')
+  this._replaceAll('qIndentFirst', '\n> ', '^')
+
   // Remove multiple line breaks
   this.text = this.text.replace(/\n[\n\s]+/gm, '\n\n')
 
+}
+
+TextToMarkdown.prototype._replaceAll = function(o, r, pre = '', post = '') {
+  if (this.opts[o]) {
+    this.opts[o] = (typeof(this.opts[o]) === 'string' ? [ this.opts[o] ] : this.opts[o])
+    for (p of this.opts[o]) {
+      this.text = this.text.replace(this._toRegExp(p, pre, post), r)
+    }
+  }
 }
 
 TextToMarkdown.prototype._toRegExp = function(s, pre = '', post = '') {
@@ -156,7 +180,7 @@ TextToMarkdown.prototype._toRegExp = function(s, pre = '', post = '') {
   let p = ''
   let o = 'gm'
   if (r) {
-    p = r[1].replace('{pg}', '([0-9MCLXVImclxvi]+)').replace('{fn}', '([-A-Z0-9]+)').replace('{*}', '(.+)')
+    p = r[1].replace('{pg}', '([0-9MCLXVImclxvi]+)').replace('{fn}', '([-A-Z0-9\*]+)').replace('{*}', '(.+)')
     o = r[2] || o
   }
   else {
