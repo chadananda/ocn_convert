@@ -75,14 +75,15 @@ General options:
                       {author},{title}.ext or {author}/{title}.ext
 
 Conversion options:
---fnRefPattern
+--fnRefPattern        
 --fnRefReplacement
 --fnTextPattern
 --fnTextReplacement   
---headersCentered     parse centered lines as headers (true)
---pageMarker          how page markers are defined in the file, e.g. '+P{}'
---pageReplacement     replacement pattern for page markers, e.g. '<p{}>'
---pageMarkersInText   if page numbers are not on their own lines (false)
+--headersCentered     parse centered lines as headers (false)
+--pgNumberFrom        number of the first page in the document
+--pgPattern           how page markers are defined in the file, e.g. '+P{pg}'
+--pgReplacement       replacement pattern for page markers, e.g. '[pg $1]'
+--pgInText            if page numbers are not on their own lines (false)
 --pIndent             string at start of every line of every paragraph
 --pIndentFirst        string at start of first line of paragraph (1-4 spaces)
 --pNumbers            if paragraphs begin with the paragraph number (false)
