@@ -179,7 +179,7 @@ for (filePath of opts.inputFiles) {
 }
 
 function extractMeta(filePath) {
-  let m = path.basename(filePath).match(/^(.+?),(.+)\.[^\.]+$/)
+  let m = path.basename(filePath).match(/^(.+?)\s?,\s?(.+)\.[^\.]+$/)
   if (m && m.length > 2) {
     return {
       author: m[1],
