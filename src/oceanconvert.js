@@ -170,6 +170,9 @@ function extractMeta(filePath) {
  * The converted object to write to the file 
  */
 function writeFile(filePath, doc) {
+  if (opts.e) {
+    filePath = path.dirname(filePath) + '/' + doc.meta.author.trim() + ', ' + doc.meta.title.trim()
+  }
   // If this is a reconversion
   if (opts.r && path.extname(filePath) === 'md' && doc.meta.hasOwnProperty(convertedFrom)) {
     fs.writeFileSync(filePath, doc)
