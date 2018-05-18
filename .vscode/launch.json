@@ -13,7 +13,7 @@
         "run-script",
         "debug",
         "--",
-        "-roe",
+        "-roed",
         "${file}",
       ],
       "port": 9229

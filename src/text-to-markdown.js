@@ -66,6 +66,7 @@ class TextToMarkdown {
     this.fnPatterns = []
     this.pgPatterns = []
     this.chPatterns = []
+    this.miscPatterns = []
     this.meta = Object.assign({
       title: '',
       author: '',
@@ -78,9 +79,16 @@ class TextToMarkdown {
       collection: '',
       _conversionOpts: {},
     }, matter(this.raw).data || {}, meta)
-    Object.keys(opts).forEach(k => {
+    Object.keys(opts).forEach(function(k) {
       if (defaults.hasOwnProperty(k)) this.meta._conversionOpts[k] = opts[k]
-    })
+    }.bind(this))
+    
+    Object.keys(this.meta._conversionOpts.miscPatterns || {}).forEach(function(k) {
+      this.miscPatterns.push({
+        pattern: this._toRegExp(k),
+        replacement: this.meta._conversionOpts.miscPatterns[k]
+      })
+    }.bind(this))
     this.opts = Object.assign(defaults, this.meta._conversionOpts)
     for (let o of ['fnRef', 'fnText', 'pg', 'ch']) {
       let prop = o.substr(0,2) + 'Patterns'
@@ -101,6 +109,9 @@ class TextToMarkdown {
           })
         }
       }
+    }
+    if (opts.d) {
+      console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',text: this.text.length + ' chars'}))
     }
   }
 }
@@ -129,7 +140,7 @@ TextToMarkdown.prototype.convert = function() {
   }
 
   // Handle chapters, footnotes, and pages
-  for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns]) {
+  for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns, ...this.miscPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
 
