@@ -115,6 +115,9 @@ if (args.d) {
 }
 
 // TODO: basic error checking here
+if (!sh.test('-e', opts.o)) {
+  sh.mkdir(opts.o)
+}
 
 
 for (filePath of opts.inputFiles) {
