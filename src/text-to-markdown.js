@@ -4,14 +4,15 @@ const defaults = {
 
   // Footnotes
   fnRefPattern: {
-    '/\[([-A-Za-z0-9]+)\]/': '[^\1]',
-    '+F(\d+)': '[^\1]'
+    '/\[([-A-Za-z0-9]+)\]/': '[^$1]',
+    '/+F(\d+)/': '[^$1]'
   },
-  fnRefReplacement: '[^{}]',
+  fnRefReplacement: '[^{num}]',
   fnTextPattern: {
-    '/\[([-A-Za-z0-9]+)\. (.+)/': ''
+    '/\[([-A-Za-z0-9]+)\. (.+)/': '[$1]: $2',
+    '/^\s*([0-9]+). \[.+\]$/': '[$1]: $2',
   },
-  fnTextReplacement: '[^{}]: ',
+  fnTextReplacement: '[{num}]: {txt}',
 
   // Headers
   headersCentered: true,
