@@ -148,7 +148,7 @@ for (filePath of opts.inputFiles) {
 
 function extractMeta(filePath) {
   let m = path.basename(filePath).match(/^(.+?),(.+)\.[^\.]+$/)
-  if (m.length > 2) {
+  if (m && m.length > 2) {
     return {
       author: m[1],
       title: m[2],
@@ -156,7 +156,7 @@ function extractMeta(filePath) {
   }
   else {
     return {
-      author: path.dirname(filePath),
+      author: path.dirname(filePath).split('/').pop(),
       title: path.basename(filePath, path.extname(filePath)),
     }
   }
