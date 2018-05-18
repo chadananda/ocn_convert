@@ -170,27 +170,32 @@ function extractMeta(filePath) {
  * The converted object to write to the file 
  */
 function writeFile(filePath, doc) {
-  if (opts.e) {
-    filePath = path.dirname(filePath) + '/' + doc.meta.author.trim() + ', ' + doc.meta.title.trim()
-  }
+  // If we are extracting title data, save the file as Author, Title.md
+  fileName = (opts.e ? 
+    doc.meta.author.trim() + ', ' + doc.meta.title.trim() + '.md' : 
+    path.basename(filePath, path.extname(filePath)) + '.md')
   // If this is a reconversion
   if (opts.r && path.extname(filePath) === 'md' && doc.meta.hasOwnProperty(convertedFrom)) {
     fs.writeFileSync(filePath, doc)
+    console.log(`Converted ${fileName}`)
     return
   }
   // If we should save to --path
   else if (opts.p) {
-    fs.writeFileSync(opts.p + '/' + path.basename(filePath, '.' + path.extname(filePath)) + '.md', doc)
+    fs.writeFileSync(opts.p + '/' + fileName, doc)
+    console.log(`Converted ${fileName}`)
     return
   }
   // If we should save to the default output folder owing to --outputFiles
   else if (opts.o) {
-    fs.writeFileSync(opts.o + '/' + path.basename(filePath, '.' + path.extname(filePath)) + '.md', doc)
+    fs.writeFileSync(opts.o + '/' + fileName, doc)
+    console.log(`Converted ${fileName}`)
     return
   }
   // If we should save to the same folder owing to --sameFolder
   else if (opts.s) {
     fs.writeFileSync(filePath + '.md', doc)
+    console.log(`Converted ${fileName}`)
     return
   }
   // If no file argument is selected, write to stdout
