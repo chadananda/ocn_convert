@@ -109,6 +109,10 @@ TextToMarkdown.prototype.convert = function() {
   this.text = this.raw
   this.text = bac.correct(this.text)
 
+  // Standardize line breaks
+  this.text = this.text.replace(/\r\n/gm, '\n').replace(/\r/gm,'')
+
+  // Handle paragraphs
   if (this.opts.pIndent) {
     this.text = this.text.replace(this._toRegExp(this.opts.pIndent, '^'), '')
   }
@@ -116,6 +120,7 @@ TextToMarkdown.prototype.convert = function() {
     this.text = this.text.replace(this._toRegExp(this.opts.pIndentFirst, '^'), '\n')
   }
 
+  // Handle blockquotes
   if (this.opts.qIndent) {
     this.text = this.text.replace(this._toRegExp(this.opts.qIndent, '^'), '> ')
   }
@@ -123,9 +128,13 @@ TextToMarkdown.prototype.convert = function() {
     this.text = this.text.replace(this._toRegExp(this.opts.qIndentFirst, '^'), '\n> ')
   }
 
+  // Handle chapters, footnotes, and pages
   for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
+
+  // Remove multiple line breaks
+  this.text = this.text.replace(/\n[\n\s]+/gm, '\n\n')
 
 }
 
