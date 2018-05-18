@@ -4,15 +4,13 @@ const TextToMarkdown = require('./text-to-markdown')
 const fs = require('fs')
 const path = require('path')
 const sh = require('shelljs')
+const matter = require('gray-matter')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
     'd',
     'D',
     'e',
-    'headersCentered',
-    'pageMarkersInText',
-    'pNumbers',
     'o',
     'r',
     's',
@@ -75,9 +73,11 @@ General options:
                       {author},{title}.ext or {author}/{title}.ext
 
 Conversion options:
---fnRefPattern        
---fnRefReplacement
---fnTextPattern
+--chPattern           pattern for chapter headers
+--chReplacement       replacement for chapter headers
+--fnRefPattern        pattern for footnote references, e.g. '[{fn}]'
+--fnRefReplacement    replacement for footnote references ('[^$1]')
+--fnTextPattern       pattern for footnote text 
 --fnTextReplacement   
 --headersCentered     parse centered lines as headers (false)
 --pgNumberFrom        number of the first page in the document
@@ -119,14 +119,23 @@ if (args.d) {
 
 for (filePath of opts.inputFiles) {
   try {
+    let writeFilePath = filePath
+    let meta = {}
     // Check if the file exists, or continue
     if (!sh.test('-f', filePath)) {
       console.error(`Error: ${filePath} does not exist, skipping...`)
     }
+    // Check if we are doing a re-conversion
+    if (opts.r && filePath.match(/\.md$/)) {
+      meta = matter(sh.head({'-n': 50}, filePath).toString() + "\n---").data
+      if (meta.hasOwnProperty('convertedFrom') && sh.test('-f', meta.convertedFrom)) {
+        filePath = meta.convertedFrom
+      }
+    }
     // Load the file into memory
     let text = fs.readFileSync(filePath, {encoding: 'UTF-8'})
     // Create a new TextToMarkdown converter
-    let doc = new TextToMarkdown(text, opts)
+    let doc = new TextToMarkdown(text, opts, meta)
     // Convert the text
     doc.convert()
     // Add metadata if necessary
@@ -135,7 +144,9 @@ for (filePath of opts.inputFiles) {
       Object.assign(doc.meta, extractMeta(filePath))
     }
     // Save the file
-    writeFile(filePath, doc)
+    writeFile(writeFilePath, doc)
+    text = null
+    doc = null
   }
   catch(e) {
     if (!opts.d) {
@@ -176,32 +187,32 @@ function writeFile(filePath, doc) {
     doc.meta.author.trim() + ', ' + doc.meta.title.trim() + '.md' : 
     path.basename(filePath, path.extname(filePath)) + '.md')
   // If this is a reconversion
-  if (opts.r && path.extname(filePath) === 'md' && doc.meta.hasOwnProperty(convertedFrom)) {
+  if (opts.r && path.extname(filePath) === '.md' && doc.meta.hasOwnProperty('convertedFrom')) {
     fs.writeFileSync(filePath, doc)
-    console.log(`Converted ${fileName}`)
+    console.log(`Converted "${fileName}"`)
     return
   }
   // If we should save to --path
   else if (opts.p) {
     fs.writeFileSync(opts.p + '/' + fileName, doc)
-    console.log(`Converted ${fileName}`)
+    console.log(`Converted "${fileName}"`)
     return
   }
   // If we should save to the default output folder owing to --outputFiles
   else if (opts.o) {
     fs.writeFileSync(opts.o + '/' + fileName, doc)
-    console.log(`Converted ${fileName}`)
+    console.log(`Converted "${fileName}"`)
     return
   }
   // If we should save to the same folder owing to --sameFolder
   else if (opts.s) {
     fs.writeFileSync(filePath + '.md', doc)
-    console.log(`Converted ${fileName}`)
+    console.log(`Converted "${fileName}"`)
     return
   }
   // If no file argument is selected, write to stdout
   else {
-    console.log(doc)
+    console.log(doc.toString())
     return
   }
   throw new Error(`Developer malfunction in function writeFile(${filePath})`)
