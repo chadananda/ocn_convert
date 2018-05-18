@@ -215,7 +215,7 @@ function writeFile(filePath, doc) {
  * the file path from which to retrieve the metadata
  */
 function _getMeta(filePath) {
-  return matter(sh.head({'-n': 50}, filePath).toString() + "\n---").data
+  return (sh.test('-f', filePath) ? matter(sh.head({'-n': 50}, filePath).toString() + "\n---").data : {})
 }
 
 /**
