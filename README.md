@@ -1,6 +1,21 @@
 # Text to Markdown Converter
 script to convert text files to Ocean MD
 
+## Requirements
+Node.js must run on your machine.
+
+## Usage
+There are several ways to use this script. Commands are listed in linux format but should work with windows equiavlents unless otherwise noted.
+
+* run `node src/oceanconvert.js`
+* `chmod` the src/oceanconvert.js file to be executable, then `./src/oceanconvert.js`
+* run `node src/oceanconvert.js -a`, then run `oceanconvert` (only on systems with /usr/local/bin in the $PATH)
+
+To convert a file, run `oceanconvert [options] [file]`. To convert all files in a folder, you can run `oceanconvert [options] *`, or for only text files, `oceanconvert [options] *.txt`. If you are doing this, you'll probably want the `-o` or `-p "path"` options.
+
+Some other possible commands:
+* `find . -type f ! -name '.*' -exec oceanconvert -oer {} \;`
+
 ## Ocean Markdown Cheat Sheet
 | Basic elements | Display |
 | --- | --: |
