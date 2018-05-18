@@ -119,33 +119,50 @@ if (args.d) {
 
 for (filePath of opts.inputFiles) {
   try {
-    let writeFilePath = filePath
-    let meta = {}
-    // Check if the file exists, or continue
+
+    // Check if filePath exists, or continue
     if (!sh.test('-f', filePath)) {
       console.error(`Error: ${filePath} does not exist, skipping...`)
     }
-    // Check if we are doing a re-conversion
-    if (opts.r && filePath.match(/\.md$/)) {
-      meta = matter(sh.head({'-n': 50}, filePath).toString() + "\n---").data
-      if (meta.hasOwnProperty('convertedFrom') && sh.test('-f', meta.convertedFrom)) {
+    
+    let meta = {}
+    // Add metadata if necessary
+    if (opts.e) {
+      Object.assign(meta, extractMeta(filePath))
+    }
+
+    // Get the path of the original file
+    let writeFilePath = _writeFilePath(filePath, meta)
+    
+    if (writeFilePath != filePath) {
+      meta.convertedFrom = filePath
+    }
+
+    // If we are reconverting...
+    if (opts.r && writeFilePath !== '-') {
+      // ...get the metadata from the saved file
+      meta = Object.assign(_getMeta(writeFilePath), meta)
+      // ...and if necessary, get the original file to read from
+      if (writeFilePath === filePath && meta.hasOwnProperty('convertedFrom')) {
+        if (!sh.test('-f', meta.convertedFrom)) {
+          console.error(`Error: "${meta.convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
+          1. change the "convertedFrom" metadata in "${filePath}", or
+          2. go to the folder where the document is and convert it again with this option:
+          -p "${path.dirname(filePath)}"`)
+          continue
+        }
         filePath = meta.convertedFrom
       }
     }
-    // Load the file into memory
-    let text = fs.readFileSync(filePath, {encoding: 'UTF-8'})
+    
     // Create a new TextToMarkdown converter
-    let doc = new TextToMarkdown(text, opts, meta)
+    let doc = new TextToMarkdown(fs.readFileSync(filePath, {encoding: 'UTF-8'}), opts, meta)
+
     // Convert the text
     doc.convert()
-    // Add metadata if necessary
-    doc.meta.convertedFrom = filePath
-    if (opts.e) {
-      Object.assign(doc.meta, extractMeta(filePath))
-    }
+
     // Save the file
     writeFile(writeFilePath, doc)
-    text = null
     doc = null
   }
   catch(e) {
@@ -182,38 +199,57 @@ function extractMeta(filePath) {
  * The converted object to write to the file 
  */
 function writeFile(filePath, doc) {
-  // If we are extracting title data, save the file as Author, Title.md
-  fileName = (opts.e ? 
-    doc.meta.author.trim() + ', ' + doc.meta.title.trim() + '.md' : 
-    path.basename(filePath, path.extname(filePath)) + '.md')
-  // If this is a reconversion
-  if (opts.r && path.extname(filePath) === '.md' && doc.meta.hasOwnProperty('convertedFrom')) {
+  if (filePath) {
     fs.writeFileSync(filePath, doc)
-    console.log(`Converted "${fileName}"`)
-    return
+    console.log(`Converted "${filePath}"`)
+  }
+  else {
+    console.log(doc.toString())
+  }
+}
+
+/**
+ * Retrieves metadata from the yaml front matter of an .md doc
+ * 
+ * @param {string} filePath 
+ * the file path from which to retrieve the metadata
+ */
+function _getMeta(filePath) {
+  return matter(sh.head({'-n': 50}, filePath).toString() + "\n---").data
+}
+
+/**
+ * Return that path to write data for a conversion
+ * 
+ * @param {string} filePath 
+ * the file being converted
+ * 
+ * @param {object} meta 
+ * the metadata for the file being converted
+ */
+function _writeFilePath(filePath, meta = {}) {
+  // If we are extracting title data, save the file as Author, Title.md
+  fileName = (
+    (opts.e && (meta.author || false) && (meta.title || false)) ? 
+    meta.author.trim() + ', ' + meta.title.trim() + '.md' : 
+    path.basename(filePath, path.extname(filePath)) + '.md'
+  )
+  // If this is a reconversion
+  if (opts.r && path.extname(filePath) === '.md') {
+    return filePath
   }
   // If we should save to --path
   else if (opts.p) {
-    fs.writeFileSync(opts.p + '/' + fileName, doc)
-    console.log(`Converted "${fileName}"`)
-    return
+    return opts.p + '/' + fileName
   }
   // If we should save to the default output folder owing to --outputFiles
   else if (opts.o) {
-    fs.writeFileSync(opts.o + '/' + fileName, doc)
-    console.log(`Converted "${fileName}"`)
-    return
+    return opts.o + '/' + fileName
   }
   // If we should save to the same folder owing to --sameFolder
   else if (opts.s) {
-    fs.writeFileSync(filePath + '.md', doc)
-    console.log(`Converted "${fileName}"`)
-    return
+    return filePath + '.md'
   }
   // If no file argument is selected, write to stdout
-  else {
-    console.log(doc.toString())
-    return
-  }
-  throw new Error(`Developer malfunction in function writeFile(${filePath})`)
+  return '-'
 }
