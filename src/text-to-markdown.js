@@ -8,7 +8,7 @@ const defaults = {
 
   // Footnotes
   fnRefPattern: {
-    '[{fn}]': '[^$1]',
+    '[{fn}](\s)': '[^$1]$2',
     '+F{fn}': '[^$1]'
   },
   fnRefReplacement: '[^$1]',
@@ -54,12 +54,15 @@ const defaults = {
   ],
 
   toLineBreaks: [
-    '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?$/',
-    '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?$/',
+    '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?[ \\t]*/',
+    '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?[ \\t]*/',
   ],
 
   miscPatterns: {
     '/(\\{ *| *\\})/': '_',
+    '/^>* _[^_\\n]+$/': '$&_',
+    '/^(>* )([^_\\n]+_)$/': '$1_$2',
+    '/^>* _[^_\\n]+_[^_\\n]+_[^_\\n]+$/': '$&_',
     '/^<nd>$/': '---',
   }
 
@@ -167,13 +170,17 @@ TextToMarkdown.prototype.convert = function() {
   this._replaceAll('toLineBreaks', '\n')
 
   // Handle chapters, footnotes, and pages
-  for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns, ...this.miscPatterns]) {
+  for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
 
   // Handle blockquotes
   this._replaceAll('qIndent', '$1> ', '^')
   this._replaceAll('qIndentFirst', '\n> ', '^')
+
+  for (let p of [...this.miscPatterns]) {
+    this.text = this.text.replace(p.pattern, p.replacement)
+  }
 
   // Remove multiple line breaks
   this.text = this.text.replace(/\n[\n\s]+/gm, '\n\n')
