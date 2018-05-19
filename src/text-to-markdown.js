@@ -52,6 +52,11 @@ const defaults = {
     '/\\.{10}(?!\\.) ?/'
   ],
 
+  toLineBreaks: [
+    '/^\\s*\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?\\s*$/',
+    '/^\\s*\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?\\s*$/',
+  ],
+
 }
 
 function escRegex(t) {
@@ -150,6 +155,8 @@ TextToMarkdown.prototype.convert = function() {
   this._replaceAll('pIndent', '', '^')
   this._replaceAll('pIndentFirst', '\n', '^')
 
+  this._replaceAll('toLineBreaks', '\n')
+
   // Handle chapters, footnotes, and pages
   for (let p of [...this.chPatterns, ...this.fnPatterns, ...this.pgPatterns, ...this.miscPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
@@ -175,7 +182,7 @@ TextToMarkdown.prototype._replaceAll = function(o, r, pre = '', post = '') {
 
 TextToMarkdown.prototype._toRegExp = function(s, pre = '', post = '') {
   // Get regex string
-  let r = s.match(/^\/(.+)\/([gim]*)$/)
+  let r = s.match(/^\/(.+)\/([gim]*)$/m)
   // Get pattern and options
   let p = ''
   let o = 'gm'
