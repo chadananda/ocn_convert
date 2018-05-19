@@ -15,6 +15,7 @@ const defaults = {
   fnTextPattern: {
     '/^\\[{fn}\\.? {*}\\]/': '[$1]: $2',
     '/^([0-9]+). \\[{*}\\]$/': '[$1]: $2',
+    '/^\\.{10} ?\\[{fn}\\.? {*}\\]/': '[$1]: $2',
   },
   fnTextReplacement: '[$1]: $2',
 
@@ -45,17 +46,22 @@ const defaults = {
 
   // Blockquotes
   qIndent: [
-    '/(?: {1,4}|\t)/',
-    '/\\.{5}(?!\\.) ?/'
+    '/(>?) ?(?: {1,4}|\t)/',
+    '/(>?) ?\\.{10} ?/',
+    '/(>) \\.{5} ?/',
   ],
   qIndentFirst: [
-    '/\\.{10}(?!\\.) ?/'
   ],
 
   toLineBreaks: [
-    '/^\\s*\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?\\s*$/',
-    '/^\\s*\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?\\s*$/',
+    '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?$/',
+    '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?$/',
   ],
+
+  miscPatterns: {
+    '/(\\{ *| *\\})/': '_',
+    '/^<nd>$/': '---',
+  }
 
 }
 
@@ -105,11 +111,14 @@ class TextToMarkdown {
     }.bind(this))
 
     // Include all misc patterns from file header
-    Object.keys(this.meta._conversionOpts.miscPatterns || {}).forEach(function(k) {
-      this.miscPatterns.push({
-        pattern: this._toRegExp(k),
-        replacement: this.meta._conversionOpts.miscPatterns[k]
-      })
+    let misc = Object.assign({}, defaults.miscPatterns, this.meta._conversionOpts.miscPatterns || {})
+    Object.keys(misc).forEach(function(k) {
+      if (misc[k] !== false) {
+        this.miscPatterns.push({
+          pattern: this._toRegExp(k),
+          replacement: misc[k]
+        })
+      }
     }.bind(this))
 
     // Set opts from conversion options
@@ -149,7 +158,7 @@ TextToMarkdown.prototype.convert = function() {
   this.text = bac.correct(this.text)
 
   // Standardize line breaks
-  this.text = this.text.replace(/\r\n/gm, '\n').replace(/\r/gm,'')
+  this.text = this.text.replace(/\r\n/gm, '\n').replace(/\r/gm,'').replace(/[ \t]+$/gm,'')
 
   // Handle paragraphs
   this._replaceAll('pIndent', '', '^')
@@ -163,7 +172,7 @@ TextToMarkdown.prototype.convert = function() {
   }
 
   // Handle blockquotes
-  this._replaceAll('qIndent', '> ', '^')
+  this._replaceAll('qIndent', '$1> ', '^')
   this._replaceAll('qIndentFirst', '\n> ', '^')
 
   // Remove multiple line breaks
@@ -187,12 +196,12 @@ TextToMarkdown.prototype._toRegExp = function(s, pre = '', post = '') {
   let p = ''
   let o = 'gm'
   if (r) {
-    p = r[1].replace('{pg}', '([0-9MCLXVImclxvi]+)').replace('{fn}', '([-A-Z0-9\*]+)').replace('{*}', '(.+)')
+    p = r[1].replace('{pg}', '([0-9MCLXVImclxvi]+)').replace('{fn}', '([-A-Z0-9\\*]+)').replace('{*}', '(.+)')
     o = r[2] || o
   }
   else {
     p = escRegex(s)
-    p = p.replace('\\{pg\\}', '([0-9MCLXVImclxvi]+)').replace('\\{fn\\}', '([-A-Za-z0-9]+)').replace('\\{\\*\\}', '(.+)')
+    p = p.replace('\\{pg\\}', '([0-9MCLXVImclxvi]+)').replace('\\{fn\\}', '([-A-Z0-9\\*]+)').replace('\\{\\*\\}', '(.+)')
   }
   p = pre + p + post
   return new RegExp(p, o)
