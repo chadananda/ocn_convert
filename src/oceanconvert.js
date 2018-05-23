@@ -164,7 +164,7 @@ for (filePath of opts.inputFiles) {
     }
 
     // Set _conversionOpts in meta if it's not there yet, to avoid problems later
-    if (!meta_conversionOpts) meta._conversionOpts = {}
+    if (!meta._conversionOpts) meta._conversionOpts = {}
 
     // Load the file into a buffer
     let fileBuffer = fs.readFileSync(filePath)
