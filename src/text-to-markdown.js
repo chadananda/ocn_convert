@@ -70,7 +70,7 @@ const defaults = {
 
 const cleanupPatterns = {
   '/\r\n/': '\n',
-  '/\r/': '',
+  '/\r/': '\n',
   '/[ \t]+$/': '',
   '/[-\u00AD]([iul]+)[-\u00AD]/': '-$1-',
   '/([^\w])l[-\u00AD]/': '$1l-',
@@ -211,7 +211,7 @@ TextToMarkdown.prototype._replaceAll = function(o, r, pre = '', post = '') {
 
 TextToMarkdown.prototype._toRegExp = function(s, pre = '', post = '') {
   // Get regex string
-  let r = s.match(/^\/(.+)\/([gim]*)$/m)
+  let r = s.match(/^\/([\s\S]+)\/([gim]*)$/m)
   // Get pattern and options
   let p = ''
   let o = 'gm'
