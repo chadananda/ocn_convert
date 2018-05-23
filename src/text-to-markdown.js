@@ -68,6 +68,17 @@ const defaults = {
 
 }
 
+const cleanupPatterns = {
+  '/\r\n/': '\n',
+  '/\r/': '',
+  '/[ \t]+$/': '',
+  '/[-\u00AD]([iul]+)[-\u00AD]/': '-$1-',
+  '/([^\w])l[-\u00AD]/': '$1l-',
+  '/[-\u00AD]([AaBbhaá]+)(?!\w)/': '-$1',
+  '/[-\u00AD]{2,}/': '--',
+  // '/\u00AD/': '',
+}
+
 function escRegex(t) {
   return (t.match(/^\/.+\/$/) ? t.replace(/^\/(.+)\/$/, '$1') : t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 }
@@ -161,7 +172,9 @@ TextToMarkdown.prototype.convert = function() {
   this.text = bac.correct(this.text)
 
   // Standardize line breaks
-  this.text = this.text.replace(/\r\n/gm, '\n').replace(/\r/gm,'').replace(/[ \t]+$/gm,'')
+  Object.keys(cleanupPatterns).forEach(k => {
+    this.text = this.text.replace(this._toRegExp(k), cleanupPatterns[k])
+  })
 
   // Handle paragraphs
   this._replaceAll('pIndent', '', '^')
