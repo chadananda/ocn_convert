@@ -132,7 +132,7 @@ for (filePath of opts.inputFiles) {
       console.error(`Error: ${filePath} does not exist, skipping...`)
     }
     
-    let meta = {_conversionOpts: {}}
+    let meta = {}
     // Add metadata if necessary
     if (opts.e) {
       Object.assign(meta, extractMeta(filePath))
@@ -162,6 +162,9 @@ for (filePath of opts.inputFiles) {
         filePath = meta.convertedFrom
       }
     }
+
+    // Set _conversionOpts in meta if it's not there yet, to avoid problems later
+    if (!meta_conversionOpts) meta._conversionOpts = {}
 
     // Load the file into a buffer
     let fileBuffer = fs.readFileSync(filePath)
