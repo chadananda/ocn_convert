@@ -11,8 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "bahai-autocorrect": "^1.0.13",
+    "chardet": "^0.5.0",
     "file-exists": "^5.0.1",
     "gray-matter": "^4.0.1",
+    "iconv-lite": "^0.4.23",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
     "shelljs": "^0.8.2"

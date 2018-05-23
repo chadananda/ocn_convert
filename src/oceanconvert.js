@@ -5,6 +5,8 @@ const fs = require('fs')
 const path = require('path')
 const sh = require('shelljs')
 const matter = require('gray-matter')
+const chardet = require('chardet')
+const iconv = require('iconv-lite')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -39,6 +41,7 @@ const args = require('minimist')(process.argv.slice(2), {
     path: 'p',
     reconvert: 'r',
     sameFolder: 's',
+    fromEncoding: 'E',
   }
 })
 
@@ -71,6 +74,7 @@ General options:
 --debugOnly, -D       just show the debugging info and exit
 --extractMeta, -e     extract metadata from the filename, in the format
                       {author},{title}.ext or {author}/{title}.ext
+--fromEncoding, -E    convert to utf-8 from encoding, or true to auto-convert
 
 Conversion options:
 --chPattern           pattern for chapter headers
@@ -128,7 +132,7 @@ for (filePath of opts.inputFiles) {
       console.error(`Error: ${filePath} does not exist, skipping...`)
     }
     
-    let meta = {}
+    let meta = {_conversionOpts: {}}
     // Add metadata if necessary
     if (opts.e) {
       Object.assign(meta, extractMeta(filePath))
@@ -137,6 +141,7 @@ for (filePath of opts.inputFiles) {
     // Get the path of the original file
     let writeFilePath = _writeFilePath(filePath, meta)
     
+    // If we are writing to a different path than we are reading, set meta.convertedFrom
     if (writeFilePath != filePath) {
       meta.convertedFrom = filePath
     }
@@ -157,9 +162,30 @@ for (filePath of opts.inputFiles) {
         filePath = meta.convertedFrom
       }
     }
-    
+
+    // Load the file into a buffer
+    let fileBuffer = fs.readFileSync(filePath)
+
+    // Character encoding defaults to UTF-8
+    let encoding = 'UTF-8'
+    // If an encoding has been specifically set for the file, get it with that encoding
+    if (meta._conversionOpts && meta._conversionOpts.encoding) {
+      encoding = meta._conversionOpts.encoding
+    }
+    // If encoding auto-conversion has been requested, get the file and try to convert it
+    else if (opts.E === true) {
+      encoding = chardet.detect(fileBuffer)
+      if (encoding !== 'UTF-8') {
+        meta._conversionOpts.encoding = encoding
+      }
+    }
+    // If a specific encoding has been requested in the command, get the file with that encoding
+    else if (opts.E) {
+      encoding = opts.E
+    }
+
     // Create a new TextToMarkdown converter
-    let doc = new TextToMarkdown(fs.readFileSync(filePath, {encoding: 'UTF-8'}), opts, meta)
+    let doc = new TextToMarkdown(iconv.decode(fileBuffer, encoding), opts, meta)
 
     // Convert the text
     doc.convert()
@@ -167,6 +193,7 @@ for (filePath of opts.inputFiles) {
     // Save the file
     writeFile(writeFilePath, doc)
     doc = null
+    fileBuffer = null
   }
   catch(e) {
     if (!opts.d) {
