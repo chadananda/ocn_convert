@@ -1,5 +1,6 @@
 const bac = require('bahai-autocorrect')
 const matter = require('gray-matter')
+const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words'), ...require('an-array-of-spanish-words'), ...require('all-the-german-words')]
 const defaults = {
 
   // Chapters
@@ -69,14 +70,15 @@ const defaults = {
 }
 
 const cleanupPatterns = {
+  // Line breaks
   '/\r\n/': '\n',
   '/\r/': '\n',
+  // Trailing spaces
   '/[ \t]+$/': '',
-  '/[-\u00AD]([iul]+)[-\u00AD]/': '-$1-',
-  '/([^\w])l[-\u00AD]/': '$1l-',
-  '/[-\u00AD]([AaBbhaá]+)(?!\w)/': '-$1',
-  '/[-\u00AD]{2,}/': '--',
-  // '/\u00AD/': '',
+  // Soft hyphens
+  '/(\\d+)\xAD(\\d+)/': '$1-$2',
+  '/[-\xAD]{2,}/': '--',
+  '/ \xAD /': ' - ',
 }
 
 function escRegex(t) {
@@ -118,6 +120,7 @@ class TextToMarkdown {
       collection: '',
       _conversionOpts: {},
     }, matter(this.raw).data || {}, meta)
+    this.meta._softHyphenWords = ''
 
     // Include all options from command parameters
     Object.keys(opts).forEach(function(k) {
@@ -169,12 +172,24 @@ class TextToMarkdown {
 
 TextToMarkdown.prototype.convert = function() {
   this.text = this.raw
-  this.text = bac.correct(this.text)
 
-  // Standardize line breaks
+  // Basic cleanup
   Object.keys(cleanupPatterns).forEach(k => {
     this.text = this.text.replace(this._toRegExp(k), cleanupPatterns[k])
   })
+  
+  let softHyphenWords = []
+  this.text.replace(/["“\'\(\[_`‘]*(\S+\xAD\S+?)["“\)\]\*\+\'`‘!?.,;:_\d]*(?!\S)/gm, (m, p1) => { softHyphenWords.push(p1) })
+  for (let match of softHyphenWords) {
+    let word = match.split('\xAD').join('')
+    if (!wordlist.includes(word) && !wordlist.includes(word.toLowerCase())) {
+      word = match.split('\xAD').join('-')
+    }
+    this.text = this.text.replace(match, word)
+    this.meta._softHyphenWords += `${word} | `
+  }
+
+  this.text = bac.correct(this.text)
 
   // Handle paragraphs
   this._replaceAll('pIndent', '', '^')
