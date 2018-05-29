@@ -1,6 +1,6 @@
 const bac = require('bahai-autocorrect')
 const matter = require('gray-matter')
-const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words'), ...require('an-array-of-spanish-words'), ...require('all-the-german-words')]
+const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words')]
 const defaults = {
 
   // Chapters
@@ -179,7 +179,10 @@ TextToMarkdown.prototype.convert = function() {
   })
   
   let softHyphenWords = []
-  this.text.replace(/["“\'\(\[_`‘]*(\S+\xAD\S+?)["“\)\]\*\+\'`‘!?.,;:_\d]*(?!\S)/gm, (m, p1) => { softHyphenWords.push(p1) })
+  if (this.text.match('\xAD')) {
+    // This regex finds all soft-hyphenated words and adds them to the index for each file.
+    this.text.replace(/["“\'\(\[_`‘]*(\S+\xAD\S+?)["“\)\]\*\+\'`‘!?.,;:_\d]*(?!\S)/gm, (m, p1) => { softHyphenWords.push(p1) })
+  }
   for (let match of softHyphenWords) {
     let word = match.split('\xAD').join('')
     if (!wordlist.includes(word) && !wordlist.includes(word.toLowerCase())) {
