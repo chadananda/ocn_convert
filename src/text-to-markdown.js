@@ -39,24 +39,24 @@ const defaults = {
   pIndent: [
   ],
   pIndentFirst: [
-    '\t',
-    '/ {1,4}(?! )/',
-    '/\\.{5}(?!\\.) ?/'
+    '\t', // Just a tab
+    '/ {1,4}(?! )/', // Exactly one to four spaces
+    '/\\.{5}(?!\\.) ?/' // five periods, possibly followed by a space
   ],
   pNumbers: false,
 
   // Blockquotes
   qIndent: [
-    '/(>?) ?(?: {1,4}|\t)/',
-    '/(>?) ?\\.{10} ?/',
-    '/(>) \\.{5} ?/',
+    '/(>?) ?(?: {1,4}|\t)/', // One to four spaces, or a tab character
+    '/(>?) ?\\.{10} ?/', // Ten periods 
+    '/(>) \\.{5} ?/', // A quote with five periods (for multi-level quotes)
   ],
   qIndentFirst: [
   ],
 
   toLineBreaks: [
-    '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?[ \\t]*/',
-    '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?[ \\t]*/',
+    '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?[ \\t]*/', // Some files have lines like [.] [.//]
+    '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?[ \\t]*/', // Some files have lines like [.///] [.]
   ],
 
   beforePatterns: {
@@ -64,11 +64,11 @@ const defaults = {
   },
 
   postPatterns: {
-    '/(\\{ *| *\\})/': '_',
-    '/^>* _[^_\\n]+$/': '$&_',
-    '/^(>* )([^_\\n]+_)$/': '$1_$2',
-    '/^>* _[^_\\n]+_[^_\\n]+_[^_\\n]+$/': '$&_',
-    '/^<nd>$/': '---',
+    '/(\\{ *| *\\})/': '_', // In some formats, italics are signified by {braces}
+    '/^>* _[^_\\n]+$/': '$&_', // Sometimes italics are not closed at the end of a blockquote line
+    '/^(>* )([^_\\n]+_)$/': '$1_$2', // Sometimes italics are not opened at the beginning of a blockquote line
+    '/^>* _[^_\\n]+_[^_\\n]+_[^_\\n]+$/': '$&_', // Again, sometimes italics are not closed at the end of a blockquote line
+    '/^<nd>$/': '---', // Some documents have this <nd> tag, which seems to be a separator of some kind
   }
 
 }
