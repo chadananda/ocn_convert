@@ -59,7 +59,11 @@ const defaults = {
     '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?[ \\t]*/',
   ],
 
-  miscPatterns: {
+  beforePatterns: {
+
+  },
+
+  postPatterns: {
     '/(\\{ *| *\\})/': '_',
     '/^>* _[^_\\n]+$/': '$&_',
     '/^(>* )([^_\\n]+_)$/': '$1_$2',
@@ -105,7 +109,8 @@ class TextToMarkdown {
     this.fnPatterns = []
     this.pgPatterns = []
     this.chPatterns = []
-    this.miscPatterns = []
+    this.prePatterns = []
+    this.postPatterns = []
 
     // Set up meta property
     this.meta = Object.assign({
@@ -127,11 +132,22 @@ class TextToMarkdown {
       if (defaults.hasOwnProperty(k)) this.meta._conversionOpts[k] = opts[k]
     }.bind(this))
 
-    // Include all misc patterns from file header
-    let misc = Object.assign({}, defaults.miscPatterns, this.meta._conversionOpts.miscPatterns || {})
+    // Include all patterns for before conversion from file header
+    let misc = Object.assign({}, defaults.prePatterns, this.meta._conversionOpts.prePatterns || {})
     Object.keys(misc).forEach(function(k) {
       if (misc[k] !== false) {
-        this.miscPatterns.push({
+        this.prePatterns.push({
+          pattern: this._toRegExp(k),
+          replacement: misc[k]
+        })
+      }
+    }.bind(this))
+
+    // Include all patterns for after conversion from file header
+    misc = Object.assign({}, defaults.postPatterns, this.meta._conversionOpts.postPatterns || {})
+    Object.keys(misc).forEach(function(k) {
+      if (misc[k] !== false) {
+        this.postPatterns.push({
           pattern: this._toRegExp(k),
           replacement: misc[k]
         })
@@ -192,6 +208,10 @@ TextToMarkdown.prototype.convert = function() {
     this.meta._softHyphenWords += `${word} | `
   }
 
+  for (let p of [...this.prePatterns]) {
+    this.text = this.text.replace(p.pattern, p.replacement)
+  }
+
   this.text = bac.correct(this.text)
 
   // Handle paragraphs
@@ -209,7 +229,7 @@ TextToMarkdown.prototype.convert = function() {
   this._replaceAll('qIndent', '$1> ', '^')
   this._replaceAll('qIndentFirst', '\n> ', '^')
 
-  for (let p of [...this.miscPatterns]) {
+  for (let p of [...this.postPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
 
