@@ -60,7 +60,7 @@ const defaults = {
   ],
 
   beforePatterns: {
-
+//    "ah(aá)(['`’‘])I": "ah$1$2i"
   },
 
   postPatterns: {
@@ -69,6 +69,7 @@ const defaults = {
     '/^(>* )([^_\\n]+_)$/': '$1_$2', // Sometimes italics are not opened at the beginning of a blockquote line
     '/^>* _[^_\\n]+_[^_\\n]+_[^_\\n]+$/': '$&_', // Again, sometimes italics are not closed at the end of a blockquote line
     '/^<nd>$/': '---', // Some documents have this <nd> tag, which seems to be a separator of some kind
+    '/<[uU]>([CDGKSTZcdgkstz])([hH])</[uU]>/': '$1_$2', // Baha'i words with underlines
   }
 
 }
@@ -208,10 +209,12 @@ TextToMarkdown.prototype.convert = function() {
     this.meta._softHyphenWords += `${word} | `
   }
 
+  // Run pre-convert patterns
   for (let p of [...this.prePatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
 
+  // Run Baha'i Autocorrect
   this.text = bac.correct(this.text)
 
   // Handle paragraphs
@@ -229,6 +232,7 @@ TextToMarkdown.prototype.convert = function() {
   this._replaceAll('qIndent', '$1> ', '^')
   this._replaceAll('qIndentFirst', '\n> ', '^')
 
+  // Run post-convert patterns
   for (let p of [...this.postPatterns]) {
     this.text = this.text.replace(p.pattern, p.replacement)
   }
