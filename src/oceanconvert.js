@@ -119,7 +119,7 @@ if (args.d) {
 }
 
 // TODO: basic error checking here
-if (!sh.test('-e', opts.o)) {
+if (opts.o && !sh.test('-e', opts.o)) {
   sh.mkdir(opts.o)
 }
 
