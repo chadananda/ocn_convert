@@ -59,8 +59,8 @@ const defaults = {
     '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?[ \\t]*/', // Some files have lines like [.///] [.]
   ],
 
-  beforePatterns: {
-//    "ah(aá)(['`’‘])I": "ah$1$2i"
+  prePatterns: {
+    "/ah([aá])(['`’‘])I/": 'ah$1$2í'
   },
 
   postPatterns: {
