@@ -1,7 +1,10 @@
-const bac = require('bahai-autocorrect')
+const BahaiAutocorrect = require('bahai-autocorrect')
 const matter = require('gray-matter')
 const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words')]
 const defaults = {
+
+  // Correct Bahá'í Words
+  correctBahaiWords: true,
 
   // Chapters
   chPattern: {},
@@ -112,6 +115,8 @@ class TextToMarkdown {
     this.chPatterns = []
     this.prePatterns = []
     this.postPatterns = []
+    this.debug = opts.debug
+    this.debugInfo = {}
 
     // Set up meta property
     this.meta = Object.assign({
@@ -180,14 +185,19 @@ class TextToMarkdown {
       }
     }
 
-    // Log the current object if debugging
-    if (opts.d) {
+    // Log the current object if in verbose mode
+    if (opts.v) {
       console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',text: this.text.length + ' chars'}))
     }
   }
 }
 
 TextToMarkdown.prototype.convert = function() {
+  if (this.opts.skip) {
+    this.text = ''
+    return
+  }
+
   this.text = this.raw
 
   // Basic cleanup
@@ -199,6 +209,7 @@ TextToMarkdown.prototype.convert = function() {
   if (this.text.match('\xAD')) {
     // This regex finds all soft-hyphenated words and adds them to the index for each file.
     this.text.replace(/["“\'\(\[_`‘]*(\S+\xAD\S+?)["“\)\]\*\+\'`‘!?.,;:_\d]*(?!\S)/gm, (m, p1) => { softHyphenWords.push(p1) })
+    this.debugInfo.softhyphens = []
   }
   for (let match of softHyphenWords) {
     let word = match.split('\xAD').join('')
@@ -207,6 +218,9 @@ TextToMarkdown.prototype.convert = function() {
     }
     this.text = this.text.replace(match, word)
     this.meta._softHyphenWords += `${word} | `
+    if (this.debug) {
+      this.debugInfo.softhyphens.push(`${match}\t${word}`)
+    }
   }
 
   // Run pre-convert patterns
@@ -215,7 +229,14 @@ TextToMarkdown.prototype.convert = function() {
   }
 
   // Run Baha'i Autocorrect
-  this.text = bac.correct(this.text)
+  if (this.opts.correctBahaiWords) {
+    let bahaiAutocorrect = new BahaiAutocorrect(this.text, false, this.debug)
+    bahaiAutocorrect.correct()
+    this.text = bahaiAutocorrect.toString()
+    if (this.debug) {
+      this.debugInfo.bahai = [...new Set(bahaiAutocorrect.diff.split('\n'))]
+    }
+  }
 
   // Handle paragraphs
   this._replaceAll('pIndent', '', '^')
@@ -279,4 +300,4 @@ TextToMarkdown.prototype.toString = function() {
   return matter.stringify(this.text, this.meta)
 }
 
-module.exports = TextToMarkdown;
+module.exports = TextToMarkdown

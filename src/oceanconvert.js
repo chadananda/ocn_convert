@@ -16,6 +16,9 @@ const args = require('minimist')(process.argv.slice(2), {
     'o',
     'r',
     's',
+    'b',
+    'B',
+    'v',
   ],
   string: [
     'fnRefPattern',
@@ -32,7 +35,10 @@ const args = require('minimist')(process.argv.slice(2), {
     'qAfter',
     'p',
   ],
-  alias: { 
+  alias: {
+    verbose: 'v',
+    bahai: 'b',
+    noBahai: 'B',
     addLink: 'a',
     debug: 'd',
     debugOnly: 'D',
@@ -75,8 +81,12 @@ General options:
 --extractMeta, -e     extract metadata from the filename, in the format
                       {author},{title}.ext or {author}/{title}.ext
 --fromEncoding, -E    convert to utf-8 from encoding, or true to auto-convert
+--verbose, -v         output debug info to terminal
 
 Conversion options:
+--bahai, -b           correct Bahá'í words (default) - use to override previous
+                      -B option recorded in .md output meta
+--noBahai, -B         skip correcting Bahá'í words
 --chPattern           pattern for chapter headers
 --chReplacement       replacement for chapter headers
 --fnRefPattern        pattern for footnote references, e.g. '[{fn}]'
@@ -113,8 +123,9 @@ const opts = Object.assign({
 // Assign some variables here
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.dirname, opts.p)
+if (opts.b || opts.B) opts.correctBahaiWords = opts.b || !opts.B
 
-if (args.d) {
+if (args.v) {
   console.log(opts)
 }
 
@@ -195,6 +206,16 @@ for (filePath of opts.inputFiles) {
 
     // Save the file
     writeFile(writeFilePath, doc)
+
+    // Save debugging info
+    if (opts.d) {
+      Object.keys(doc.debugInfo).forEach(function(k) {
+        if (doc.debugInfo[k].length) {
+          writeFile(`${writeFilePath}.${k}.debug`, (typeof(doc.debugInfo[k]) === 'string' ? doc.debugInfo[k] : doc.debugInfo[k].join('\n')) + '\n')
+        }
+      })
+    }
+
     doc = null
     fileBuffer = null
   }
@@ -234,7 +255,7 @@ function extractMeta(filePath) {
 function writeFile(filePath, doc) {
   if (filePath) {
     fs.writeFileSync(filePath, doc)
-    console.log(`Converted "${filePath}"`)
+    console.log(`Wrote "${filePath}"`)
   }
   else {
     console.log(doc.toString())
