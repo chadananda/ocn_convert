@@ -34,6 +34,8 @@ const args = require('minimist')(process.argv.slice(2), {
     'qBefore',
     'qAfter',
     'p',
+    'fromEncoding',
+    'E',
   ],
   alias: {
     verbose: 'v',
@@ -80,7 +82,7 @@ General options:
 --debugOnly, -D       just show the debugging info and exit
 --extractMeta, -e     extract metadata from the filename, in the format
                       {author},{title}.ext or {author}/{title}.ext
---fromEncoding, -E    convert to utf-8 from encoding, or true to auto-convert
+--fromEncoding, -E    convert to utf-8 from a specific encoding (override)
 --verbose, -v         output debug info to terminal
 
 Conversion options:
@@ -186,16 +188,16 @@ for (filePath of opts.inputFiles) {
     if (meta._conversionOpts && meta._conversionOpts.encoding) {
       encoding = meta._conversionOpts.encoding
     }
+    // If a specific encoding has been requested in the command, get the file with that encoding
+    else if (opts.E) {
+      encoding = opts.E
+    }
     // If encoding auto-conversion has been requested, get the file and try to convert it
-    else if (opts.E === true) {
+    else {
       encoding = chardet.detect(fileBuffer)
       if (encoding !== 'UTF-8') {
         meta._conversionOpts.encoding = encoding
       }
-    }
-    // If a specific encoding has been requested in the command, get the file with that encoding
-    else if (opts.E) {
-      encoding = opts.E
     }
 
     // Create a new TextToMarkdown converter
