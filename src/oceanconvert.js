@@ -19,6 +19,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'b',
     'B',
     'v',
+    'R',
   ],
   string: [
     'fnRefPattern',
@@ -50,6 +51,7 @@ const args = require('minimist')(process.argv.slice(2), {
     reconvert: 'r',
     sameFolder: 's',
     fromEncoding: 'E',
+    noReconvert: 'R',
   }
 })
 
@@ -111,7 +113,8 @@ Conversion options:
 Output options:
 --outputFiles, -o     output files to ocn_convert/output
 --path, -p            output files to path
---reconvert, -r       redo conversion of inputFile using metadata (false)
+--reconvert, -r       redo conversion of inputFile using metadata (true)
+--noReconvert, -R    do NOT re-convert the file on future passes
 --sameFolder, -s      save output as .md file in same folder as inputFile
 
 `)
@@ -126,6 +129,7 @@ const opts = Object.assign({
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.dirname, opts.p)
 if (opts.b || opts.B) opts.correctBahaiWords = opts.b || !opts.B
+if (opts.r || opts.R) opts.reconvert = opts.r || !opts.R
 
 if (args.v) {
   console.log(opts)
