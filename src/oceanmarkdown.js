@@ -249,6 +249,15 @@ OceanMarkdown.prototype.correctSoftHyphens = function() {
 OceanMarkdown.prototype.toString = function() {
   // Capture the word count in the poorly-named meta.wordsCount
   this.meta.wordsCount = this.content.match(/\s+/gm).length
+  if (this.meta.id === '') {
+    this.meta.id = ((this.meta.titleEn || this.meta.title) + '-' + this.meta.language)
+      .replace(/[Áá]/g, 'a')
+      .replace(/[Íí]/g,'i')
+      .replace(/[Úú]/g, 'u')
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^-_\w]/g, '')
+  }
   return matter.stringify(this.content, this.meta)
 }
 
