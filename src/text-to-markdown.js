@@ -33,15 +33,15 @@ class TextToMarkdown extends OceanMarkdown {
     
       // Footnotes
       fnRefPatterns: {
-        '[{fn}](\s)': '[^$1]$2',
+        '/\\[{fn}\\](\\s)/': '[^$1]$2',
         '+F{fn}': '[^$1]'
       },
       fnRefPattern: '',
       fnRefReplacement: '[^$1]',
-      fnTextPattern: {
-        '/^\\[{fn}\\.? {*}\\]/': '[$1]: $2',
-        '/^([0-9]+). \\[{*}\\]$/': '[$1]: $2',
-        '/^\\.{10} ?\\[{fn}\\.? {*}\\]/': '[$1]: $2',
+      fnTextPatterns: {
+        '/^>?\\s*\\[{fn}\\.? {*}\\]/': '[$1]: $2',
+        '/^>?\\s*([0-9]+). \\[{*}\\]$/': '[$1]: $2',
+        '/^>?\\s*\\.{10} ?\\[{fn}\\.? {*}\\]/': '[$1]: $2',
       },
       fnTextPattern: '',
       fnTextReplacement: '[$1]: $2',
@@ -77,24 +77,32 @@ class TextToMarkdown extends OceanMarkdown {
     
       // Blockquotes
       qIndent: [
-        '/(>?) ?(?: {1,4}|\t)/', // One to four spaces, or a tab character
-        '/(>?) ?\\.{10} ?/', // Ten periods 
+        '/(>?) ?(?: {1,4}|\\t)/', // One to four spaces, or a tab character
+        '/(>?) ?\\.{10} ?/', // Ten periods
         '/(>) \\.{5} ?/', // A quote with five periods (for multi-level quotes)
       ],
       qIndentFirst: [
       ],
     
       toLineBreaks: [
-        '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\]?[ \\t]*/', // Some files have lines like [.] [.//]
-        '/^\\[?\\.\\/\\/\\/\\]?\\s*\\[?\\.\\]?[ \\t]*/', // Some files have lines like [.///] [.]
+        '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\/?\\]?[ \\t]*/', // Some files have lines like [.] [.//]
+        '/^\\[?\\.\\/\\/\\/?\\]?\\s*\\[?\\.\\]?[ \\t]*/', // Some files have lines like [.///] [.]
       ],
-    
-      postPatterns: {
+
+      prePatterns: {
+        '/^\\s*<nd>\\s*$/': '\n---\n', // Some documents have this <nd> tag, which seems to be a separator of some kind
+      },
+
+      endPatterns: { // These happen before the postPatterns, because the italics get messed up by the underlined letters
         '/(\\{ *| *\\})/': '_', // In some formats, italics are signified by {braces}
         '/^>* _[^_\\n]+$/': '$&_', // Sometimes italics are not closed at the end of a blockquote line
         '/^(>* )([^_\\n]+_)$/': '$1_$2', // Sometimes italics are not opened at the beginning of a blockquote line
         '/^>* _[^_\\n]+_[^_\\n]+_[^_\\n]+$/': '$&_', // Again, sometimes italics are not closed at the end of a blockquote line
-        '/^<nd>$/': '---', // Some documents have this <nd> tag, which seems to be a separator of some kind
+      },
+    
+      postPatterns: {
+        '/\\[pg (\\d*)O([\\dO]*)]/': '[pg $10$2]', // Sometimes page numbers have capital O instaed of 0
+        '/\\[pg (\\d*)O(\\d*)]/': '[pg $10$2]', // Sometimes page numbers have capital O instaed of 0...twice?
       }
     
     })
@@ -133,17 +141,17 @@ TextToMarkdown.prototype.convert = function() {
   this.replaceAll(this.opts.toLineBreaks, '\n')
 
   // Handle chapters, footnotes, and pages
-  this
-    .replaceAll(this.opts.chPatterns)
-    .replaceAll(this.opts.fnRefPatterns)
-    .replaceAll(this.opts.fnTextPatterns)
-    .replaceAll(this.opts.pgPatterns)
+  this.replaceAll(this.opts.chPatterns)
+  this.replaceAll(this.opts.fnRefPatterns)
+  this.replaceAll(this.opts.fnTextPatterns)
+  this.replaceAll(this.opts.pgPatterns)
 
   // Handle blockquotes
   this.replaceAll(this.opts.qIndent, '$1> ', '^')
   this.replaceAll(this.opts.qIndentFirst, '\n\n> ', '^')
 
   // Run post-convert patterns
+  this.replaceAll(this.opts.endPatterns)
   this.replaceAll(this.opts.postPatterns)
 
   return this

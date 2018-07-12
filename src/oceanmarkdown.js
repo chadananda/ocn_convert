@@ -4,37 +4,41 @@
  * 
  * Meta information is as follows:
  * 
-id                  | string      | yes       | a unique string that describes the document
-title               | string      | yes       | the title of the document, in the language of the document
-titleShort          | string      |           | a short title that won't break mobile design
-titleAbrv           | string      |           | title abbreviation, e.g. GWB for Gleanings from the Writings of Baha'u'llah
-titleEn             | string      | yes*      | the title of the work, in English (required for books in other languages)
-author              | str/array   | yes       | the author of the document
-access              | enum        | yes       | either "research", or "encumbered" for documents that cannot be scrolled.
-language            | string      | yes       | the two-character language code of the document
-searchLang          | array       |           | an array of language codes to search for the document
-priority            | int, 5-10   | yes       | how important it is (1 = most, 10 = least)
-wordsCount          | int         | yes       | word count of the document
-sourceUrl           | string      |           | a link to the content, for display in search results
-year                | int         |           | the year that the document was written
- | | | 
-audio               | boolean     |           | whether the item has audio
-audioUrl            | str/array   |           | url(s) linking to the audio file(s)
-authorAbrv          | string      |           | abbreviated author name, only for central figures
-category            | enum        |           | the religion to which the content relates (@TODO: get category names)
-collectionCoverURL  | string      |           | url linking to the image for the collection
-collectionId        | string      |           | a unique id for the collection, comprising the collectionTitle lowercased and dashed
-collectionTitle     | string      |           | the title for the collection
-coverUrl            | string      |           | url linking to the representative image
-documentType        | enum        |           | a document type (@TODO: define document types)
-editor              | str/array   |           | who edited the document
-narrator            | str/array   |           | the narrator for the audio file
-needsEditing        | boolean     |           | if the text quality is bad, e.g. from OCR, mark this as true
-originalLang        | string      |           | the original language from which the translation was made
-publicationName     | string      |           | the name of the publication in which this document appeared
-publicationEdition  | string      |           | the edition of a book
-translationRef      | string      |           | a string that is consistent across translations of a single document
-translator          | str/array   |           | who translated the document
+Field               | type        | Req | Description
+------------------- | ----------- | :-: | -----------
+id                  | string      | yes | a unique string that describes the document
+access              | enum        | yes | either "research", or "encumbered" for documents that cannot be scrolled.
+author              | str/array   | yes | the author of the document
+authorAbrv          | string      |     | abbreviated author name, only for central figures
+collectionTitle     | string      | *   | the title for the collection (required for items in a collection)
+collectionId        | string      | *   | a unique id for the collection, comprising the collectionTitle lowercased and dashed
+collectionCoverURL  | string      |     | url linking to the image for the collection
+language            | string      | yes | the two-character language code of the document
+ocnmd_version       | number      | yes | the version number for the ocean markdown spec used in the file
+priority            | int, 5-10   | yes | how important it is (1 = most, 10 = least)
+sourceUrl           | string      | *   | a link to the content, for display in search results (required for scraped content)
+title               | string      | yes | the title of the document, in the language of the document
+titleShort          | string      |     | a short title that won't break mobile design
+titleAbrv           | string      |     | title abbreviation, e.g. GWB for Gleanings from the Writings of Baha'u'llah
+titleEn             | string      | *   | the title of the work, in English (required for books in other languages)
+wordsCount          | int         | yes | word count of the document
+_conversionOpts     | object      | *   | the settings used when converting the document (see oceanconvert.js)
+_convertedFrom      | string      | *   | the file path or url from which the document was converted (see oceanconvert.js)
+searchLang          | array       |     | an array of language codes to search for the document
+year                | int         |     | the year that the document was written
+needsEditing        | boolean     |     | if the text quality is bad, e.g. from OCR, mark this as true
+audio               | boolean     |     | whether the item has audio
+audioUrl            | str/array   |     | url(s) linking to the audio file(s)
+category            | enum        |     | the religion to which the content relates (@TODO: get category names)
+coverUrl            | string      |     | url linking to the representative image
+documentType        | enum        |     | a document type (@TODO: define document types)
+editor              | str/array   |     | who edited the document
+narrator            | str/array   |     | the narrator for the audio file
+originalLang        | string      |     | the original language from which the translation was made
+publicationName     | string      |     | the name of the publication in which this document appeared
+publicationEdition  | string      |     | the edition of a book
+translationRef      | string      |     | a string that is consistent across translations of a single document
+translator          | str/array   |     | who translated the document
  */
 const BahaiAutocorrect = require('bahai-autocorrect')
 const matter = require('gray-matter')
@@ -91,7 +95,9 @@ class OceanMarkdown{
       title: '',
       author: '',
       access: 'encumbered',
+      ocnmd_version: 1,
       language: 'en',
+      priority: 10,
       wordsCount: 0,
       _conversionOpts: {},
     }, fromInput.data || {}, meta)
@@ -100,7 +106,7 @@ class OceanMarkdown{
     this.meta._softHyphenWords = ''
 
     // Set new conversion options for saving
-    this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts)
+    this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts, {reconvert: true})
 
     // Get the full list of options for conversion
     this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts)
@@ -248,7 +254,7 @@ OceanMarkdown.prototype.correctSoftHyphens = function() {
 
 OceanMarkdown.prototype.toString = function() {
   // Capture the word count in the poorly-named meta.wordsCount
-  this.meta.wordsCount = this.content.match(/\s+/gm).length
+  this.meta.wordsCount = this.content.match(/\s+/gm).length // TODO: get a more accurate word count
   if (this.meta.id === '') {
     this.meta.id = ((this.meta.titleEn || this.meta.title) + '-' + this.meta.language)
       .replace(/[Áá]/g, 'a')
@@ -257,6 +263,7 @@ OceanMarkdown.prototype.toString = function() {
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^-_\w]/g, '')
+      .replace(/-+/g, '-')
   }
   return matter.stringify(this.content, this.meta)
 }
@@ -290,12 +297,12 @@ OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
   let p = ''
   let o = 'gm'
   if (r) {
-    p = r[1].replace('{pg}', '([0-9MCLXVImclxvi]+)').replace('{fn}', '([-A-Z0-9\\*]+)').replace('{*}', '(.+)')
+    p = r[1].replace('{pg}', '([0-9MCLXVIOmclxvi]+)').replace('{fn}', '([AEFI]?[-0-9O\\*]+)').replace('{*}', '(.+)')
     o = r[2] || o
   }
   else {
     p = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    p = p.replace('\\{pg\\}', '([0-9MCLXVImclxvi]+)').replace('\\{fn\\}', '([-A-Z0-9\\*]+)').replace('\\{\\*\\}', '(.+)')
+    p = p.replace('\\{pg\\}', '([0-9MCLXVIOmclxvi]+)').replace('\\{fn\\}', '([AEFI]?[-0-9O\\*]+)').replace('\\{\\*\\}', '(.+)')
   }
   p = pre + p + post
   return new RegExp(p, o)
