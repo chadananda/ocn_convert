@@ -35,6 +35,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'qBefore',
     'qAfter',
     'p',
+    'path',
     'fromEncoding',
     'E',
   ],
@@ -48,7 +49,6 @@ const args = require('minimist')(process.argv.slice(2), {
     extractMeta: 'e',
     outputFiles: 'o',
     path: 'p',
-    reconvert: 'r',
     sameFolder: 's',
     fromEncoding: 'E',
     noReconvert: 'R',
@@ -127,9 +127,10 @@ const opts = Object.assign({
 
 // Assign some variables here
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
-if (opts.p) opts.p = path.resolve(process.dirname, opts.p)
+if (opts.p) opts.p = path.resolve(process.cwd(), opts.p)
 if (opts.b || opts.B) opts.correctBahaiWords = opts.b || !opts.B
 if (opts.r || opts.R) opts.reconvert = opts.r || !opts.R
+else if (opts.reconvert) opts.reconvert = true
 
 if (args.v) {
   console.log(opts)
@@ -158,9 +159,9 @@ for (filePath of opts.inputFiles) {
     // Get the path of the original file
     let writeFilePath = _writeFilePath(filePath, meta)
     
-    // If we are writing to a different path than we are reading, set meta.convertedFrom
+    // If we are writing to a different path than we are reading, set meta._convertedFrom
     if (writeFilePath != filePath) {
-      meta.convertedFrom = filePath
+      meta._convertedFrom = filePath
     }
 
     // If we are reconverting...
@@ -168,15 +169,15 @@ for (filePath of opts.inputFiles) {
       // ...get the metadata from the saved file
       meta = Object.assign(_getMeta(writeFilePath), meta)
       // ...and if necessary, get the original file to read from
-      if (writeFilePath === filePath && meta.hasOwnProperty('convertedFrom')) {
-        if (!sh.test('-f', meta.convertedFrom)) {
-          console.error(`Error: "${meta.convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
-          1. change the "convertedFrom" metadata in "${filePath}", or
+      if (writeFilePath === filePath && meta.hasOwnProperty('_convertedFrom')) {
+        if (!sh.test('-f', meta._convertedFrom)) {
+          console.error(`Error: "${meta._convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
+          1. change the "_convertedFrom" metadata in "${filePath}", or
           2. go to the folder where the document is and convert it again with this option:
           -p "${path.dirname(filePath)}"`)
           continue
         }
-        filePath = meta.convertedFrom
+        filePath = meta._convertedFrom
       }
     }
 
