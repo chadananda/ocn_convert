@@ -53,7 +53,7 @@ titleShort          | string      | *   | a short title that won't break mobile 
 ocnmd_version       | number      | yes | the version number for the ocean markdown spec used in the file, currently 1
 sourceUrl           | string      | *   | a link to the content, for display in search results (required for scraped content)
 wordsCount          | int         | *   | word count of the document (auto-generated)
-| | | | **Extended info:**
+| <h3>Extended info:</h3>
 category            | enum        |     | the religion to which the content relates (@TODO: get category names)
 coverUrl            | string      |     | url linking to the representative image
 documentType        | enum        |     | a document type (@TODO: define document types)
@@ -62,20 +62,20 @@ needsEditing        | boolean     |     | if the text quality is bad, e.g. from 
 publicationName     | string      |     | the name of the publication in which this document appeared
 publicationEdition  | string      |     | the edition of a book
 year                | int         |     | the year that the document was written
-| | | | **Primary texts and authors:**
+| <h3>Primary texts and authors:</h3>
 authorAbrv          | string      |     | abbreviated author name, only for central figures
 titleAbrv           | string      |     | title abbreviation, e.g. GWB for Gleanings from the Writings of Baha'u'llah
-| | | | **Collection information:**
+| <h3>Collection information:</h3>
 collectionTitle     | string      | *   | the title for the collection (required for items in a collection)
 collectionId        | string      | *   | a unique id for the collection, comprising the collectionTitle lowercased and dashed
 collectionCoverUrl  | string      |     | url linking to the image for the collection
-| | | | **Language info:**
+| <h3>Language info:</h3>
 titleEn             | string      | *   | the title of the work, in English (required for books in other languages)
 originalLang        | string      |     | the original language from which a translation was made
 searchLang          | array       |     | an array of language codes to search for the document
 translationRef      | string      |     | a string that is consistent across translations of a single document
 translator          | str/array   |     | who translated the document
-| | | | **Audio:**
+| <h3>Audio:</h3>
 audio               | boolean     |     | whether the item has audio
 audioUrl            | str/array   |     | url(s) linking to the audio file(s)
 narrator            | str/array   |     | the narrator for the audio file
@@ -158,13 +158,15 @@ narrator:
 | **Page numbers**
 | `[pg 1]` or `[pg1]` | [pg 1] or [pg1] |
 | **Block attributes**
-| `This is some`<br>`paragraph text.{.dropcap}` | <p><span style="font-size:20px;vertical-align:text-top;">T</span>his is some paragraph text.</p> |
-| `This is some`<br>`paragraph text.{.center}` | <p style="text-align:center">This is some paragraph text.</p> |
-| `This is some`<br>`paragraph text.{.right}` | <p style="text-align:right">This is some paragraph text.</p> |
-| `This is`<br>`   a verse`<br>`     of poetry{.verse}` | `This is`<br>`   a verse`<br>`     of poetry` |
-| `This is some`<br>`paragraph text.{.list}` | <p>This is some<br>paragraph text.</p> |
+| `This paragraph will`<br>`have a dropcap.{.dropcap}` | <p><b><i>T</i></b>his paragraph will have a dropcap.</p> |
+| `This paragraph will`<br>`be centered.{.center}` | <center>This paragraph will be centered.</center> |
+| `This paragraph will`<br>`be right aligned.{.right}` | <p>This paragraph will be right aligned.</p> |
+| <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry{.verse}</pre> | <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry{.verse}</pre> |
+| `This is`<br>`a list`<br>`with linebreaks.{.list}` | <p>This is some<br>a list<br>with linebreaks.</p> |
 
-.ed: editor
-.sig: signature line, e.g. on letters
-.sit: exhortation or sitilcent
-.noid: no paragraph number
+Other classes:
+
+- .ed: editor
+- .sig: signature line, e.g. on letters
+- .sit: exhortation or sitilcent
+- .noid: no paragraph number
