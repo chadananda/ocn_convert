@@ -79,9 +79,7 @@ translator          | str/array   |     | who translated the document
 audio               | boolean     |     | whether the item has audio
 audioUrl            | str/array   |     | url(s) linking to the audio file(s)
 narrator            | str/array   |     | the narrator for the audio file
-
-This program (ocn_convert) recognizes the following additional fields:
-
+| <h3>Conversion info:</h3>
 _conversionOpts     | object      | *   | the settings used when converting the document (see oceanconvert.js)
 _convertedFrom      | string      | *   | the file path or url from which the document was converted (see oceanconvert.js)
 
