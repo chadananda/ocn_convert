@@ -13,7 +13,7 @@
         "run-script",
         "debug",
         "--",
-        "-roed",
+        "-rod",
         "${file}",
       ],
       "port": 9229
