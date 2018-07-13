@@ -4,7 +4,7 @@
  * 
  * Meta information is as follows:
  * 
-Field               | type        | Req | Description
+Field               | Type        | Req | Description
 ------------------- | ----------- | :-: | -----------
 id                  | string      | yes | a unique string that describes the document
 access              | enum        | yes | either "research", or "encumbered" for documents that cannot be scrolled.
@@ -255,16 +255,21 @@ OceanMarkdown.prototype.correctSoftHyphens = function() {
 OceanMarkdown.prototype.toString = function() {
   // Capture the word count in the poorly-named meta.wordsCount
   this.meta.wordsCount = this.content.match(/\s+/gm).length // TODO: get a more accurate word count
+  // Ensure that the document has an ID
   if (this.meta.id === '') {
-    this.meta.id = ((this.meta.titleEn || this.meta.title) + '-' + this.meta.language)
-      .replace(/[Áá]/g, 'a')
-      .replace(/[Íí]/g,'i')
-      .replace(/[Úú]/g, 'u')
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^-_\w]/g, '')
-      .replace(/-+/g, '-')
+    let tr = require('transliteration').slugify
+    let trOptions = {
+      ignore: [':'],
+    }
+    let rawId = [this.meta.author, (this.meta.titleEn || this.meta.title), this.meta.language].join(':')
+      .replace(/[_‘’'\(\)]/g, '')
+    this.meta.id = tr(rawId, trOptions)
+      .replace(/:(?:a|an|the)-/, ':')
+      .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
+      .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
+      .replace(/-?:-?/g, ':')
   }
+  // Return the string of the document
   return matter.stringify(this.content, this.meta)
 }
 

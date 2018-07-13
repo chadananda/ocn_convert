@@ -21,6 +21,7 @@
     "iconv-lite": "^0.4.23",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
-    "shelljs": "^0.8.2"
+    "shelljs": "^0.8.2",
+    "transliteration": "^1.6.2"
   }
 }
