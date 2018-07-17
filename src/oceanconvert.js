@@ -5,8 +5,6 @@ const fs = require('fs')
 const path = require('path')
 const sh = require('shelljs')
 const matter = require('gray-matter')
-const chardet = require('chardet')
-const iconv = require('iconv-lite')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -147,9 +145,11 @@ for (filePath of opts.inputFiles) {
 
     // Check if filePath exists, or continue
     if (!sh.test('-f', filePath)) {
-      console.error(`Error: ${filePath} does not exist, skipping...`)
+      console.error(`Error: ${filePath} is not a file, skipping...`)
+      continue
     }
     
+    let doc
     let meta = {}
     // Add metadata if necessary
     if (opts.e) {
@@ -158,55 +158,19 @@ for (filePath of opts.inputFiles) {
 
     // Get the path of the original file
     let writeFilePath = _writeFilePath(filePath, meta)
-    
-    // If we are writing to a different path than we are reading, set meta._convertedFrom
-    if (writeFilePath != filePath) {
-      meta._convertedFrom = filePath
-    }
 
     // If we are reconverting...
-    if (opts.r && writeFilePath !== '-') {
-      // ...get the metadata from the saved file
-      meta = Object.assign(_getMeta(writeFilePath), meta)
-      // ...and if necessary, get the original file to read from
-      if (writeFilePath === filePath && meta.hasOwnProperty('_convertedFrom')) {
-        if (!sh.test('-f', meta._convertedFrom)) {
-          console.error(`Error: "${meta._convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
-          1. change the "_convertedFrom" metadata in "${filePath}", or
-          2. go to the folder where the document is and convert it again with this option:
-          -p "${path.dirname(filePath)}"`)
-          continue
-        }
-        filePath = meta._convertedFrom
+    if (writeFilePath !== '-' && sh.test('-f', writeFilePath)) {
+      if (writeFilePath === filePath) {
+        doc = new TextToMarkdown(writeFilePath, opts, meta)
+      }
+      else {
+        doc = new TextToMarkdown(writeFilePath, opts, meta, filePath)
       }
     }
-
-    // Set _conversionOpts in meta if it's not there yet, to avoid problems later
-    if (!meta._conversionOpts) meta._conversionOpts = {}
-
-    // Load the file into a buffer
-    let fileBuffer = fs.readFileSync(filePath)
-
-    // Character encoding defaults to UTF-8
-    let encoding = 'UTF-8'
-    // If an encoding has been specifically set for the file, get it with that encoding
-    if (meta._conversionOpts && meta._conversionOpts.encoding) {
-      encoding = meta._conversionOpts.encoding
-    }
-    // If a specific encoding has been requested in the command, get the file with that encoding
-    else if (opts.E) {
-      encoding = opts.E
-    }
-    // If encoding auto-conversion has been requested, get the file and try to convert it
     else {
-      encoding = chardet.detect(fileBuffer)
-      if (encoding !== 'UTF-8') {
-        meta._conversionOpts.encoding = encoding
-      }
+      doc = new TextToMarkdown(filePath, opts, meta)
     }
-
-    // Create a new TextToMarkdown converter
-    let doc = new TextToMarkdown(iconv.decode(fileBuffer, encoding), opts, meta)
 
     // Convert the text
     doc.convert()

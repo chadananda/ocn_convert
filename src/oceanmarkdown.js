@@ -7,17 +7,42 @@
 const BahaiAutocorrect = require('bahai-autocorrect')
 const matter = require('gray-matter')
 const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words')]
+const path = require('path')
+const sh = require('shelljs')
+const iconv = require('iconv-lite')
+const chardet = require('chardet')
+const fs = require('fs')
 
 class OceanMarkdown{
 
   /**
    * Class for creating Ocean Markdown files
-   * @param {string} input Existing ocean markdown, or raw data
+   * @param {string} input Existing ocean markdown, raw data, or filepath
    * @param {object} opts The options to use when converting to markdown
    * @param {object} meta Metadata for the markdown file
    * @param {string} raw Raw data, if overriding the existing content
    */
   constructor(input, opts = {}, meta = {}, raw = '') {
+    let encoding = opts.E || false
+    let file
+
+    // If the input is a filename, get the actual data
+    if ((file = this._loadFile(input, encoding)) !== false) {
+      this.filePath = path.resolve(process.cwd(), input)
+      encoding = file.encoding
+      input = file.content
+    }
+
+    // Get the text (fromInput.content) and meta if available (fromInput.data)
+    let fromInput = matter(input)
+
+    // Set the content
+    this.content = fromInput.content || ''
+
+    // For new conversions, save the encoding if necessary
+    if (encoding !== 'UTF-8') {
+      opts.encoding = encoding
+    }
 
     // Set up conversion option types
     this.optionTypes = {}
@@ -25,6 +50,7 @@ class OceanMarkdown{
 
     // Set default conversion options
     this.addDefaultConversionOpts({
+      encoding: 'UTF-8',
       reconvert: true,
       correctBahaiWords: true,
       correctSoftHyphens: true,
@@ -50,9 +76,6 @@ class OceanMarkdown{
       '/ \xAD /': ' - ',
     }
 
-    // Get the text (fromInput.content) and meta if available (fromInput.data)
-    let fromInput = matter(input)
-
     // Set up the required meta fields
     this.meta = Object.assign({
       id: '', // TODO: set ID
@@ -66,9 +89,6 @@ class OceanMarkdown{
       _conversionOpts: {},
     }, fromInput.data || {}, meta)
 
-    // Soft hyphen words are calculated every time
-    this.meta._softHyphenWords = ''
-
     // Set new conversion options for saving
     this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts, {reconvert: true})
 
@@ -79,9 +99,34 @@ class OceanMarkdown{
     this.debug = opts.debug
     this.debugInfo = {}
 
-    // Set up raw and content
-    this.raw = raw || fromInput.content || ''
-    this.content = fromInput.content || this.raw
+    // Get the raw data
+    encoding = opts.E || this.meta._conversionOpts.encoding || false
+    if (raw) {
+      // If a filename has been passed, get it
+      if ((file = this._loadFile(raw, encoding)) !== false) {
+        this.raw = file.content
+        if (file.encoding !== 'UTF-8') this.meta._conversionOpts.encoding = rawFile.encoding
+      }
+      // Use any other string as raw data
+      else {
+        this.raw = raw
+      }
+    }
+    else if (this.meta._convertedFrom) {
+      // If there is a file source in the metadata, get that
+      if ((file = this._loadFile(this.meta._convertedFrom, encoding)) !== false) {
+        this.raw = file.content
+        if (file.encoding !== 'UTF-8') this.meta._conversionOpts.encoding = file.encoding
+      }
+      // If you can't get it, then leave the raw unset -- there is raw data, but it is unavailable
+      else {
+        this.raw = ''
+      }
+    }
+    else {
+      // If there is no data passed, and no file source in the meta, then the content is also the raw data
+      this.raw = this.content
+    }
 
     // Log the current object if in verbose mode
     if (opts.v) {
@@ -163,12 +208,22 @@ OceanMarkdown.prototype.mergeOptions = function(existing, merging) {
 }
 
 OceanMarkdown.prototype.convert = function() {
+
+  if (!this.raw) {
+    console.error(`Error: "${this.meta._convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
+    1. change the "_convertedFrom" metadata in "${this.filePath}", or
+    2. go to the folder where the document is and convert it again with this option:
+    -p "${path.dirname(this.filePath)}"`)
+  }
+
   // Reset content
   this.content = this.raw
 
   this.cleanupText().replaceAll(this.opts.prePatterns)
 
   if (this.opts.correctSoftHyphens) {
+    // Soft hyphen words are calculated every time
+    this.meta._softHyphenWords = ''
     this.correctSoftHyphens()
   }
 
@@ -275,6 +330,35 @@ OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
   }
   p = pre + p + post
   return new RegExp(p, o)
+}
+
+OceanMarkdown.prototype._loadFile = function(filePath, encoding = false) {
+
+  // Check if filePath is definitely not a file path
+  if (/\n/.test(filePath) || filePath.length > 2048) {
+    return false
+  }
+
+  filePath = path.resolve(process.cwd(), filePath)
+
+  // Check if filePath exists
+  if (!sh.test('-f', filePath)) {
+    return false
+  }
+  
+  // Load the file into a buffer
+  let fileBuffer = fs.readFileSync(filePath)
+
+  // If no encoding is specified, try to detect it
+  if (!encoding || encoding === true) {
+    encoding = chardet.detect(fileBuffer)
+  }
+
+  return {
+    encoding: encoding,
+    content: iconv.decode(fileBuffer, encoding)
+  }
+
 }
 
 module.exports = OceanMarkdown
