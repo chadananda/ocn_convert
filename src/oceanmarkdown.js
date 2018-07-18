@@ -12,6 +12,7 @@ const sh = require('shelljs')
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const fs = require('fs')
+const tr = require('transliteration').slugify
 
 class OceanMarkdown{
 
@@ -82,7 +83,6 @@ class OceanMarkdown{
       title: '',
       author: '',
       access: 'encumbered',
-      ocnmd_version: 1,
       language: 'en',
       priority: 10,
       wordsCount: 0,
@@ -272,22 +272,7 @@ OceanMarkdown.prototype.correctSoftHyphens = function() {
 }
 
 OceanMarkdown.prototype.toString = function() {
-  // Capture the word count in the poorly-named meta.wordsCount
-  this.meta.wordsCount = this.content.match(/\s+/gm).length // TODO: get a more accurate word count
-  // Ensure that the document has an ID
-  if (this.meta.id === '') {
-    let tr = require('transliteration').slugify
-    let trOptions = {
-      ignore: [':'],
-    }
-    let rawId = [this.meta.author, (this.meta.titleEn || this.meta.title), this.meta.language].join(':')
-      .replace(/[_‘’'\(\)]/g, '')
-    this.meta.id = tr(rawId, trOptions)
-      .replace(/:(?:a|an|the)-/, ':')
-      .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
-      .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
-      .replace(/-?:-?/g, ':')
-  }
+  this.checkMeta()
   // Return the string of the document
   return matter.stringify(this.content, this.meta)
 }
@@ -357,6 +342,79 @@ OceanMarkdown.prototype._loadFile = function(filePath, encoding = false) {
   return {
     encoding: encoding,
     content: iconv.decode(fileBuffer, encoding)
+  }
+
+}
+
+OceanMarkdown.prototype.checkMeta = function() {
+
+  // Upgrade from previous versions
+  if (typeof this.meta.ocnmd_version === 'undefined') {
+
+    this.meta.access = (this.meta.encumbered ? 'encumbered' : 'research')
+    delete this.meta.encumbered
+    delete this.meta.status
+    
+    if (typeof this.meta.language === 'undefined') this.meta.language = 'en'
+
+    if (typeof this.meta.priority !== 'number') this.meta.priority = 9
+
+    if (typeof this.meta.image === 'string') this.meta.coverUrl = this.meta.image
+    delete this.meta.image
+
+    if (this.meta.url) this.meta.sourceUrl = this.meta.url
+    delete this.meta.url
+
+    if (this.meta.collection) this.meta.collectionTitle = this.meta.collection
+    delete this.meta.collection
+
+    if (this.meta.collectionImage) this.meta.collectionCoverUrl = this.meta.collectionImage
+    delete this.meta.collectionImage
+
+    if (this.meta.date) this.meta.year = this.meta.date.match(/(\d{4})/)[1]
+    delete this.meta.date
+
+    if (this.meta.doctype) this.meta.documentType = this.meta.doctype
+    delete this.meta.doctype
+
+    if (typeof this.meta.audio === 'string') {
+      this.meta.audioUrl = this.meta.audio
+      delete this.meta.audio
+      this.meta.audio = true
+    }
+
+    if (typeof this.meta.author === 'undefined') {
+      this.meta.author = ''
+    }
+    if (typeof this.meta.title === 'undefined') {
+      this.meta.title = ''
+    }
+
+  }
+
+  // Save ocnmd_version
+  this.meta.ocnmd_version = 1
+
+  // Capture the word count in the poorly-named meta.wordsCount
+  this.meta.wordsCount = this.content.match(/\s+/gm).length // TODO: get a more accurate word count
+
+  // Create a collection id if there is none
+  if (this.meta.collectionTitle && !this.meta.collectionId) {
+    this.meta.collectionId = tr(this.meta.collectionTitle)
+  }
+
+  // Ensure that the document has an ID
+  if (typeof this.meta.id === 'undefined' || !this.meta.id || this.meta.id === '') {
+    let trOptions = {
+      ignore: [':'],
+    }
+    let rawId = [this.meta.author, (this.meta.titleEn || this.meta.title), this.meta.language].join(':')
+      .replace(/[_‘’'\(\)]/g, '')
+    this.meta.id = tr(rawId, trOptions)
+      .replace(/:(?:a|an|the)-/, ':')
+      .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
+      .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
+      .replace(/-?:-?/g, ':')
   }
 
 }

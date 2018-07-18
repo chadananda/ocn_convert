@@ -18,6 +18,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'B',
     'v',
     'R',
+    'M',
   ],
   string: [
     'fnRefPattern',
@@ -50,6 +51,7 @@ const args = require('minimist')(process.argv.slice(2), {
     sameFolder: 's',
     fromEncoding: 'E',
     noReconvert: 'R',
+    checkMeta: 'M',
   }
 })
 
@@ -83,6 +85,8 @@ General options:
 --extractMeta, -e     extract metadata from the filename, in the format
                       {author},{title}.ext or {author}/{title}.ext
 --fromEncoding, -E    convert to utf-8 from a specific encoding (override)
+--checkMeta, -M       check metadata for an already converted file
+                      (creates id and word count, and updates old fields)
 --verbose, -v         output debug info to terminal
 
 Conversion options:
@@ -172,8 +176,11 @@ for (filePath of opts.inputFiles) {
       doc = new TextToMarkdown(filePath, opts, meta)
     }
 
-    // Convert the text
-    doc.convert()
+    if (opts.M) {
+    }
+    else {
+      doc.convert()
+    }
 
     // Save the file
     writeFile(writeFilePath, doc)

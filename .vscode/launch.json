@@ -18,5 +18,19 @@
       ],
       "port": 9229
     },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Check Meta for Current File",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run-script",
+        "debug",
+        "--",
+        "-rM",
+        "${file}",
+      ],
+      "port": 9229
+    },
   ]
 }
