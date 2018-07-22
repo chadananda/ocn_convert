@@ -20,7 +20,7 @@ Some other possible commands:
 
 Ocean Markdown files use basic YAML Front Matter (YFM) for holding metadata about each file. In order to be valid YFM, for Ocean Markdown, the following conditions must hold:
 
-* YFM is surrounded by lines containing only `---`
+* YFM is preceeded and followed by lines containing only `---`
 * YFM occurs only at the very beginning of the file, i.e. `---` is the very first line
 * YFM does not contain blank lines
 * Single values consist of a field name and value separated by a colon and space, e.g.: `field: value`
@@ -28,7 +28,7 @@ Ocean Markdown files use basic YAML Front Matter (YFM) for holding metadata abou
 
 Here is an example:
 
-<code>
+```
 ---
 singleItem: This is a string.
 multipleItem:
@@ -37,7 +37,7 @@ multipleItem:
 number: 0
 boolean: true
 ---
-</code>
+```
 
 The following fields are recognized in all Ocean Markdown files:
 
@@ -89,7 +89,21 @@ Below is a basic YFM template for new files that are being created by hand. It m
 ---
 author: 
 title: 
-titleShort:
+language: en
+sourceUrl: 
+publicationName: 
+year: 
+translator: 
+---
+```
+
+The full list of fields is as follows:
+
+```
+---
+author: 
+title: 
+titleShort: 
 access: 
 language: en
 priority: 9
