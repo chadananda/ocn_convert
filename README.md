@@ -165,15 +165,15 @@ narrator:
 | **Tables**
 | ```| Col 1   | Col 2        | Col 3   |```<br>```| ------- | :----------: | ------: |```<br>```| left    |   centered   |   right |``` | (a table) |
 | **Footnotes**
-| `Footnote reference in sentence [^1].` |
+| `Footnote references[^1] in sentence.[^2]` |
 | `[^1]: Footnote text` |
 | **Page numbers**
-| `[pg 1]` or `[pg1]` | [pg 1] or [pg1] |
+| `[pg 1]` | [pg 1] |
 | **Block attributes**
 | `This paragraph will`<br>`have a dropcap.{.dropcap}` | <p><b><i>T</i></b>his paragraph will have a dropcap.</p> |
 | `This paragraph will`<br>`be centered.{.center}` | <center>This paragraph will be centered.</center> |
 | `This paragraph will`<br>`be right aligned.{.right}` | <p>This paragraph will be right aligned.</p> |
-| <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry{.verse}</pre> | <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry{.verse}</pre> |
+| <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry{.verse}</pre> | <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry.</pre> |
 | `This is`<br>`a list`<br>`with linebreaks.{.list}` | <p>This is some<br>a list<br>with linebreaks.</p> |
 
 Other classes:
