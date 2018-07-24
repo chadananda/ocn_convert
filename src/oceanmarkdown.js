@@ -34,6 +34,29 @@ class OceanMarkdown{
       input = file.content
     }
 
+    // Correct improper YFM
+    if (opts.fixMeta) {
+      let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n)(?:\.{2,6}|---)\s*\n/m)
+      if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
+        let newMatter = ('---' + testMatter[2] + '---\n')
+          // fix lines with apostrophes
+          .replace(/^( *)([\w_]+|'[^']'): .*'.*/mg, t => (/^[^:]+: '.*'$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
+          // fix lines with quotes
+          .replace(/^( *)([\w_]+|'[^']'): .*".*/mg, t => (/^[^:]+: ".*"$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
+          // fix lines with brackets
+          .replace(/^( *)([\w_]+|'[^']'): (.*?\[)/mg, '$1$2: >-\n$1  $3')
+          // fix lines with colons
+          .replace(/^( *)([\w_]+|'[^']'): (.*?: )/mg, '$1$2: >-\n$1  $3')
+          // fix lines with no value
+          .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'))/mg, '$1: \'\'\n')
+          // fix lines with values that are followed by un-indented multi-line values
+          .replace(/^([\w_]+|'[^']'): (.{3,}\r?\n)(?![\w_]+: |'[^']': |---)/gm, '$1: |\n  $2')
+          .replace(/^((?![\w_]+:[ \r\n]| '[^']':[ \r\n]|---)[^\s\r\n']+)/gm, '  $1')
+        // replace broken YFM with fixed
+        input = input.replace(testMatter[0], newMatter)
+      }
+    }
+
     // Get the text (fromInput.content) and meta if available (fromInput.data)
     let fromInput = matter(input)
 
@@ -60,7 +83,6 @@ class OceanMarkdown{
       },
       postPatterns: {
         '/\\n[\\n\\s]+/': '\n\n',
-        '/<[uU]>([CDGKSTZcdgkstz])([hH])</[uU]>/': '$1_$2', // Baha'i words with underlines
       }
     })
 
@@ -243,8 +265,7 @@ OceanMarkdown.prototype.cleanupText = function() {
 
 OceanMarkdown.prototype.correctBahaiWords = function() {
   let bahaiAutocorrect = new BahaiAutocorrect(this.content, false, this.debug)
-  bahaiAutocorrect.correct()
-  this.content = bahaiAutocorrect.toString()
+  this.content = bahaiAutocorrect.correct().stripUnderlines().toString()
   if (this.debug) {
     this.debugInfo.bahai = [...new Set(bahaiAutocorrect.diff.split('\n'))]
   }
@@ -330,12 +351,20 @@ OceanMarkdown.prototype._loadFile = function(filePath, encoding = false) {
   if (!sh.test('-f', filePath)) {
     return false
   }
-  
+
   // Load the file into a buffer
   let fileBuffer = fs.readFileSync(filePath)
 
+  // For .md files, just use UTF-8
+  if (!encoding && /\.md$/.test(filePath)) {
+    return {
+      encoding: encoding,
+      content: iconv.decode(fileBuffer, 'UTF-8')
+    }
+  }
+
   // If no encoding is specified, try to detect it
-  if (!encoding || encoding === true) {
+  if (encoding === 'detect' || !encoding || encoding === true) {
     encoding = chardet.detect(fileBuffer)
   }
 
@@ -354,6 +383,11 @@ OceanMarkdown.prototype.checkMeta = function() {
     this.meta.access = (this.meta.encumbered ? 'encumbered' : 'research')
     delete this.meta.encumbered
     delete this.meta.status
+
+    if (typeof this.meta.source === 'string' && this.meta.source) {
+      this.meta.publicationName = this.meta.source.replace(/, (?:pages?|pg|vol).+/i, '')
+    }
+    delete this.meta.source
     
     if (typeof this.meta.language === 'undefined') this.meta.language = 'en'
 
@@ -371,22 +405,39 @@ OceanMarkdown.prototype.checkMeta = function() {
     if (this.meta.collectionImage) this.meta.collectionCoverUrl = this.meta.collectionImage
     delete this.meta.collectionImage
 
-    if (this.meta.date) this.meta.year = this.meta.date.match(/(\d{4})/)[1]
+    if (typeof this.meta.date === 'number' && this.meta.date < 2050) {
+      this.meta.year = this.meta.date
+    }
+    else if (this.meta.date && /\d{4}/.test(this.meta.date)) { 
+      this.meta.year = this.meta.date.match(/(\d{4})/)[1]
+    }
     delete this.meta.date
 
     if (this.meta.doctype) this.meta.documentType = this.meta.doctype
     delete this.meta.doctype
 
-    if (typeof this.meta.audio === 'string') {
+    if (typeof this.meta.audio === 'string' && this.meta.audio.length) {
       this.meta.audioUrl = this.meta.audio
-      delete this.meta.audio
       this.meta.audio = true
     }
+    else if (typeof this.meta.audioUrl === 'string' && this.meta.audioUrl.length) {
+      this.meta.audio = true
+    }
+    else {
+      delete this.meta.audio
+    }
 
-    if (typeof this.meta.author === 'undefined') {
+    if (typeof this.meta.author === 'string' && this.meta.author.length) {
+      this.meta.author = new BahaiAutocorrect(this.meta.author).correct().stripUnderlines().toString()
+    }
+    else {
       this.meta.author = ''
     }
-    if (typeof this.meta.title === 'undefined') {
+
+    if (typeof this.meta.title === 'string' && this.meta.title.length) {
+      this.meta.title = new BahaiAutocorrect(this.meta.title).correct().stripUnderlines().toString()
+    }
+    else {
       this.meta.title = ''
     }
 
@@ -403,12 +454,15 @@ OceanMarkdown.prototype.checkMeta = function() {
     this.meta.collectionId = tr(this.meta.collectionTitle)
   }
 
+  // Remove blank encoding
+  if (this.meta._conversionOpts.encoding === '') delete this.meta._conversionOpts.encoding
+
   // Ensure that the document has an ID
   if (typeof this.meta.id === 'undefined' || !this.meta.id || this.meta.id === '') {
     let trOptions = {
       ignore: [':'],
     }
-    let rawId = [this.meta.author, (this.meta.titleEn || this.meta.title), this.meta.language].join(':')
+    let rawId = [(this.meta.author || this.meta.publicationName || 'unknown'), (this.meta.titleEn || this.meta.title).replace(':', ' '), this.meta.language].join(':')
       .replace(/[_‘’'\(\)]/g, '')
     this.meta.id = tr(rawId, trOptions)
       .replace(/:(?:a|an|the)-/, ':')

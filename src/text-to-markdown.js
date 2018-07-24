@@ -34,17 +34,18 @@ class TextToMarkdown extends OceanMarkdown {
       // Footnotes
       fnRefPatterns: {
         '/\\[{fn}\\](\\s)/': '[^$1]$2',
-        '+F{fn}': '[^$1]'
+        '+F{fn}': '[^$1]',
       },
       fnRefPattern: '',
       fnRefReplacement: '[^$1]',
       fnTextPatterns: {
-        '/^>?\\s*\\[{fn}\\.? {*}\\]/': '[$1]: $2',
-        '/^>?\\s*([0-9]+). \\[{*}\\]$/': '[$1]: $2',
-        '/^>?\\s*\\.{10} ?\\[{fn}\\.? {*}\\]/': '[$1]: $2',
+        '/^>?\\s*[\\[\\{]\\^?{fn}[\\]\\}] {*}/': '[^$1]: $2',
+        '/^>?\\s*\\[{fn}\\.? {*}\\]/': '[^$1]: $2',
+        '/^>?\\s*([0-9]+). \\[{*}\\]$/': '[^$1]: $2',
+        '/^>?\\s*\\.{10} ?\\[{fn}\\.? {*}\\]/': '[^$1]: $2',
       },
       fnTextPattern: '',
-      fnTextReplacement: '[$1]: $2',
+      fnTextReplacement: '[^$1]: $2',
     
       // Headers
       headersCentered: false,
@@ -54,6 +55,7 @@ class TextToMarkdown extends OceanMarkdown {
         '|PPage_{pg}': '[pg $1]',
         '<p{pg}>': '[pg $1]',
         '+P{pg}': '[pg $1]',
+        '/\\{\\{p?{pg}\\}\\}/': '[pg $1]',
         '+p': '[pg]',
         '+P': '[pg]',
       },

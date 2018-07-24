@@ -27,6 +27,7 @@
         "run-script",
         "debug",
         "--",
+        "--fixMeta",
         "-rM",
         "${file}",
       ],

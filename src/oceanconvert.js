@@ -19,6 +19,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'v',
     'R',
     'M',
+    'fixMeta',
   ],
   string: [
     'fnRefPattern',
@@ -87,6 +88,7 @@ General options:
 --fromEncoding, -E    convert to utf-8 from a specific encoding (override)
 --checkMeta, -M       check metadata for an already converted file
                       (creates id and word count, and updates old fields)
+--fixMeta             attempt to fix metadata from a broken file
 --verbose, -v         output debug info to terminal
 
 Conversion options:
