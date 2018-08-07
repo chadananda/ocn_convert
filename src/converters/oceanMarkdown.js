@@ -13,11 +13,12 @@ const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const fs = require('fs')
 const tr = require('transliteration').slugify
+const isUrl = require('is-url')
 
 class OceanMarkdown{
 
   /**
-   * Class for creating Ocean Markdown files
+   * Class for creating Ocean Markdown files.
    * @param {string} input Existing ocean markdown, raw data, or filepath
    * @param {object} opts The options to use when converting to markdown
    * @param {object} meta Metadata for the markdown file
@@ -27,8 +28,11 @@ class OceanMarkdown{
     let encoding = opts.E || false
     let file
 
-    // If the input is a filename, get the actual data
+    // GET INITIAL DATA
     if ((file = this._loadFile(input, encoding)) !== false) {
+      // This may be a previously converted Ocean Markdown file, or it may be an original file, either on disk or in a URL.
+      // It gets loaded first because we need to process the YFM metadata to determine the conversion options.
+      // We may also need to load the original file later in order to get the raw data.
       this.filePath = path.resolve(process.cwd(), input)
       encoding = file.encoding
       input = file.content
@@ -57,22 +61,30 @@ class OceanMarkdown{
       }
     }
 
-    // Get the text (fromInput.content) and meta if available (fromInput.data)
+    // CONTENT
     let fromInput = matter(input)
-
-    // Set the content
     this.content = fromInput.content || ''
 
-    // For new conversions, save the encoding if necessary
+    // ENCODING
     if (encoding !== 'UTF-8') {
       opts.encoding = encoding
     }
 
-    // Set up conversion option types
+    // METADATA
+    this.meta = Object.assign({
+      id: '', // TODO: set ID
+      title: '',
+      author: '',
+      access: 'encumbered',
+      language: 'en',
+      priority: 10,
+      wordsCount: 0,
+      _conversionOpts: {},
+    }, fromInput.data || {}, meta)
+
+    // CONVERSION OPTIONS
     this.optionTypes = {}
     this.defaultConversionOpts = {}
-
-    // Set default conversion options
     this.addDefaultConversionOpts({
       encoding: 'UTF-8',
       reconvert: true,
@@ -85,8 +97,12 @@ class OceanMarkdown{
         '/\\n[\\n\\s]+/': '\n\n',
       }
     })
+    // Set new conversion options for saving
+    this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts, {reconvert: true})
+    // Get the full list of options for conversion
+    this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts)
 
-    // Text cleanup patterns that will apply for all source types
+    // BASIC TEXT CLEANUP PATTERNS
     this.cleanupPatterns = {
       // Line breaks
       '/\r\n/': '\n',
@@ -99,29 +115,14 @@ class OceanMarkdown{
       '/ \xAD /': ' - ',
     }
 
-    // Set up the required meta fields
-    this.meta = Object.assign({
-      id: '', // TODO: set ID
-      title: '',
-      author: '',
-      access: 'encumbered',
-      language: 'en',
-      priority: 10,
-      wordsCount: 0,
-      _conversionOpts: {},
-    }, fromInput.data || {}, meta)
-
-    // Set new conversion options for saving
-    this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts, {reconvert: true})
-
-    // Get the full list of options for conversion
-    this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts)
-
-    // Set up for debugging
+    // DEBUGGING
     this.debug = opts.debug
     this.debugInfo = {}
 
-    // Get the raw data
+    // RAW DATA
+    // Since we may be re-converting an Ocean Markdown file, we may
+    // need to get the original data from metadata or passed arguments.
+    // The original data goes into this.raw.
     encoding = opts.E || this.meta._conversionOpts.encoding || false
     if (raw) {
       // If a filename has been passed, get it
@@ -150,7 +151,7 @@ class OceanMarkdown{
       this.raw = this.content
     }
 
-    // Log the current object if in verbose mode
+    // VERBOSE LOGGING
     if (opts.v) {
       console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',content: this.content.length + ' chars'}))
     }
@@ -338,12 +339,25 @@ OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
   return new RegExp(p, o)
 }
 
-OceanMarkdown.prototype._loadFile = function(filePath, encoding = false) {
+OceanMarkdown.prototype._loadUrl = function(url) {
+  const request = require('request')
+  const cachedRequest = require('cached-request')(request).setValue('ttl', (60*60*24*30))
+  let doc = ''
+  cachedRequest({url: url}, (err, res, _) => {
+    if (err) {
+      throw err
+    }
+    doc = _
+  })
+  return doc
+}
 
-  // Check if filePath is definitely not a file path
-  if (/\n/.test(filePath) || filePath.length > 2048) {
+OceanMarkdown.prototype._loadFile = function(filePath, encoding = false) {
+  if (/\n/.test(filePath) || (filePath.length > 2048)) {
     return false
   }
+  
+  if (isUrl(filePath)) return this._loadUrl(filePath)
 
   filePath = path.resolve(process.cwd(), filePath)
 
@@ -471,6 +485,10 @@ OceanMarkdown.prototype.checkMeta = function() {
       .replace(/-?:-?/g, ':')
   }
 
+}
+
+OceanMarkdown.prototype.prepareRaw = function(data) {
+  this.raw = data
 }
 
 module.exports = OceanMarkdown

@@ -1,4 +1,4 @@
-const OceanMarkdown = require('./oceanmarkdown')
+const OceanMarkdown = require('./oceanMarkdown.js')
 
 class TextToMarkdown extends OceanMarkdown {
 
@@ -128,6 +128,7 @@ TextToMarkdown.prototype.convert = function() {
   this.cleanupText().replaceAll(this.opts.prePatterns)
 
   if (this.opts.correctSoftHyphens) {
+    this.meta._softHyphenWords = ''
     this.correctSoftHyphens()
   }
 

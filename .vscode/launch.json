@@ -33,5 +33,21 @@
       ],
       "port": 9229
     },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test External URL",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run-script",
+        "debug",
+        "--",
+        "-o",
+        "-c",
+        "html",
+        "https://google.com",
+      ],
+      "port": 9229
+    },
   ]
 }

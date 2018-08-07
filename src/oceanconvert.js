@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 
-const TextToMarkdown = require('./text-to-markdown')
+const converters = {
+  text: require('./converters/textToMarkdown'),
+  html: require('./converters/htmlToMarkdown'),
+  // pdf: require('./converters/pdfToMarkdown'),
+  // pandoc: require('./converters/pandocToMarkdown'),
+}
 const fs = require('fs')
 const path = require('path')
 const sh = require('shelljs')
 const matter = require('gray-matter')
+const isUrl = require('is-url')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -22,6 +28,8 @@ const args = require('minimist')(process.argv.slice(2), {
     'fixMeta',
   ],
   string: [
+    'converter',
+    'c',
     'fnRefPattern',
     'fnRefReplacement',
     'fnTextPattern',
@@ -53,6 +61,7 @@ const args = require('minimist')(process.argv.slice(2), {
     fromEncoding: 'E',
     noReconvert: 'R',
     checkMeta: 'M',
+    converter: 'c',
   }
 })
 
@@ -75,12 +84,14 @@ if (args.a) {
 
 if (args.help || args.h || args['?'] || !args._[0]) {
   console.log(`
-Usage: ocean-convert [options] inputFile [inputFile...]
+Usage: ocean-convert [options] pathOrUrl [pathOrUrl...]
 
 inputFile: file path to convert
 
 General options:
 --addLink, -a         add a symlink to your /usr/local/bin directory
+--converter, -c       the name of the converter to use, e.g. text or html
+                      (may be the name of a custom converter, e.g. wikipedia)
 --debug, -d           show debugging information if errors occur (false)
 --debugOnly, -D       just show the debugging info and exit
 --extractMeta, -e     extract metadata from the filename, in the format
@@ -126,10 +137,11 @@ Output options:
 }
 
 const opts = Object.assign({
-  inputFiles: args._.map(f => path.resolve(process.cwd(), f)),
+  inputFiles: args._.map(f => (isUrl(f) ? f : path.resolve(process.cwd(), f))),
 }, args, {_: null})
 
 // Assign some variables here
+if (!opts.c) opts.c = 'text'
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.cwd(), opts.p)
 if (opts.b || opts.B) opts.correctBahaiWords = opts.b || !opts.B
@@ -150,8 +162,8 @@ for (filePath of opts.inputFiles) {
   try {
 
     // Check if filePath exists, or continue
-    if (!sh.test('-f', filePath)) {
-      console.error(`Error: ${filePath} is not a file, skipping...`)
+    if (!isUrl(filePath) && !sh.test('-f', filePath)) {
+      console.error(`Error: ${filePath} is not a file or url, skipping...`)
       continue
     }
     
@@ -167,15 +179,17 @@ for (filePath of opts.inputFiles) {
 
     // If we are reconverting...
     if (writeFilePath !== '-' && sh.test('-f', writeFilePath)) {
+      // Reconvert from a previously converted ocean markdown file
       if (writeFilePath === filePath) {
-        doc = new TextToMarkdown(writeFilePath, opts, meta)
+        doc = new converters[opts.c](writeFilePath, opts, meta)
       }
+      // Reconvert from an original document or URL
       else {
-        doc = new TextToMarkdown(writeFilePath, opts, meta, filePath)
+        doc = new converters[opts.c](writeFilePath, opts, meta, filePath)
       }
     }
     else {
-      doc = new TextToMarkdown(filePath, opts, meta)
+      doc = new converters[opts.c](filePath, opts, meta)
     }
 
     if (opts.M) {
@@ -262,6 +276,7 @@ function _getMeta(filePath) {
  * the metadata for the file being converted
  */
 function _writeFilePath(filePath, meta = {}) {
+  // TODO: create good filenames for external urls
   // If we are extracting title data, save the file as Author, Title.md
   fileName = (
     (opts.e && (meta.author || false) && (meta.title || false)) ? 
