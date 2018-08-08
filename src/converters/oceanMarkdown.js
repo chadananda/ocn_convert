@@ -94,6 +94,7 @@ class OceanMarkdown{
         "/ah([aá])(['`’‘])I/": 'ah$1$2í'
       },
       postPatterns: {
+        '/<[uU]>([CDGKSTZcdgkstz])([hH])<\/[uU]>/': '$1_$2', // can't strip the <u> tags until the end, because it messes up italics determination
         '/\\n[\\n\\s]+/': '\n\n',
       }
     })
@@ -266,7 +267,7 @@ OceanMarkdown.prototype.cleanupText = function() {
 
 OceanMarkdown.prototype.correctBahaiWords = function() {
   let bahaiAutocorrect = new BahaiAutocorrect(this.content, false, this.debug)
-  this.content = bahaiAutocorrect.correct().stripUnderlines().toString()
+  this.content = bahaiAutocorrect.correct().toString()
   if (this.debug) {
     this.debugInfo.bahai = [...new Set(bahaiAutocorrect.diff.split('\n'))]
   }
