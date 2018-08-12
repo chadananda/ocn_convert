@@ -8,71 +8,27 @@ const BahaiAutocorrect = require('bahai-autocorrect')
 const matter = require('gray-matter')
 const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words')]
 const path = require('path')
-const sh = require('shelljs')
-const iconv = require('iconv-lite')
-const chardet = require('chardet')
-const fs = require('fs')
 const tr = require('transliteration').slugify
-const isUrl = require('is-url')
 
 class OceanMarkdown{
 
   /**
    * Class for creating Ocean Markdown files.
-   * @param {string} input Existing ocean markdown, raw data, or filepath
-   * @param {object} opts The options to use when converting to markdown
-   * @param {object} meta Metadata for the markdown file
-   * @param {string} raw Raw data, if overriding the existing content
+   * @param {string} input Raw data to be converted
+   * @param {object} opts The metadata and conversion options to use
    */
-  constructor(input, opts = {}, meta = {}, raw = '') {
-    let encoding = opts.E || false
-    let file
+  constructor(input, opts = {}) {
 
-    // GET INITIAL DATA
-    if ((file = this._loadFile(input, encoding)) !== false) {
-      // This may be a previously converted Ocean Markdown file, or it may be an original file, either on disk or in a URL.
-      // It gets loaded first because we need to process the YFM metadata to determine the conversion options.
-      // We may also need to load the original file later in order to get the raw data.
-      this.filePath = path.resolve(process.cwd(), input)
-      encoding = file.encoding
-      input = file.content
-    }
+    // CORRECT IMPROPER FRONT MATTER
+    if (opts.fixMeta) input = this.fixMeta(input)
 
-    // Correct improper YFM
-    if (opts.fixMeta) {
-      let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n)(?:\.{2,6}|---)\s*\n/m)
-      if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
-        let newMatter = ('---' + testMatter[2] + '---\n')
-          // fix lines with apostrophes
-          .replace(/^( *)([\w_]+|'[^']'): .*'.*/mg, t => (/^[^:]+: '.*'$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
-          // fix lines with quotes
-          .replace(/^( *)([\w_]+|'[^']'): .*".*/mg, t => (/^[^:]+: ".*"$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
-          // fix lines with brackets
-          .replace(/^( *)([\w_]+|'[^']'): (.*?\[)/mg, '$1$2: >-\n$1  $3')
-          // fix lines with colons
-          .replace(/^( *)([\w_]+|'[^']'): (.*?: )/mg, '$1$2: >-\n$1  $3')
-          // fix lines with no value
-          .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'))/mg, '$1: \'\'\n')
-          // fix lines with values that are followed by un-indented multi-line values
-          .replace(/^([\w_]+|'[^']'): (.{3,}\r?\n)(?![\w_]+: |'[^']': |---)/gm, '$1: |\n  $2')
-          .replace(/^((?![\w_]+:[ \r\n]| '[^']':[ \r\n]|---)[^\s\r\n']+)/gm, '  $1')
-        // replace broken YFM with fixed
-        input = input.replace(testMatter[0], newMatter)
-      }
-    }
-
-    // CONTENT
+    // RAW DATA
     let fromInput = matter(input)
-    this.content = fromInput.content || ''
-
-    // ENCODING
-    if (encoding !== 'UTF-8') {
-      opts.encoding = encoding
-    }
+    this.raw = fromInput.content || ''
 
     // METADATA
     this.meta = Object.assign({
-      id: '', // TODO: set ID
+      id: '',
       title: '',
       author: '',
       access: 'encumbered',
@@ -80,7 +36,8 @@ class OceanMarkdown{
       priority: 10,
       wordsCount: 0,
       _conversionOpts: {},
-    }, fromInput.data || {}, meta)
+    }, fromInput.data || {})
+    this.mergeMeta(opts)
 
     // CONVERSION OPTIONS
     this.optionTypes = {}
@@ -96,67 +53,41 @@ class OceanMarkdown{
       postPatterns: {
         '/<[uU]>([CDGKSTZcdgkstz])([hH])<\/[uU]>/': '$1_$2', // can't strip the <u> tags until the end, because it messes up italics determination
         '/\\n[\\n\\s]+/': '\n\n',
+      },
+      cleanupPatterns: {
+        // Line breaks
+        '/\r\n/': '\n',
+        '/\r/': '\n',
+        // Trailing spaces
+        '/[ \t]+$/': '',
+        // Soft hyphens
+        '/(\\d+)\xAD(\\d+)/': '$1-$2',
+        '/[-\xAD]{2,}/': '--',
+        '/ \xAD /': ' - ',
       }
     })
-    // Set new conversion options for saving
-    this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts, {reconvert: true})
-    // Get the full list of options for conversion
-    this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts)
-
-    // BASIC TEXT CLEANUP PATTERNS
-    this.cleanupPatterns = {
-      // Line breaks
-      '/\r\n/': '\n',
-      '/\r/': '\n',
-      // Trailing spaces
-      '/[ \t]+$/': '',
-      // Soft hyphens
-      '/(\\d+)\xAD(\\d+)/': '$1-$2',
-      '/[-\xAD]{2,}/': '--',
-      '/ \xAD /': ' - ',
-    }
+    this.mergeAllOptions(opts)
 
     // DEBUGGING
     this.debug = opts.debug
     this.debugInfo = {}
 
-    // RAW DATA
-    // Since we may be re-converting an Ocean Markdown file, we may
-    // need to get the original data from metadata or passed arguments.
-    // The original data goes into this.raw.
-    encoding = opts.E || this.meta._conversionOpts.encoding || false
-    if (raw) {
-      // If a filename has been passed, get it
-      if ((file = this._loadFile(raw, encoding)) !== false) {
-        this.raw = file.content
-        if (file.encoding !== 'UTF-8') this.meta._conversionOpts.encoding = rawFile.encoding
-      }
-      // Use any other string as raw data
-      else {
-        this.raw = raw
-      }
-    }
-    else if (this.meta._convertedFrom) {
-      // If there is a file source in the metadata, get that
-      if ((file = this._loadFile(this.meta._convertedFrom, encoding)) !== false) {
-        this.raw = file.content
-        if (file.encoding !== 'UTF-8') this.meta._conversionOpts.encoding = file.encoding
-      }
-      // If you can't get it, then leave the raw unset -- there is raw data, but it is unavailable
-      else {
-        this.raw = ''
-      }
-    }
-    else {
-      // If there is no data passed, and no file source in the meta, then the content is also the raw data
-      this.raw = this.content
-    }
+    // CONTENT
+    this.content = ''
+    this.prepareRaw()
 
     // VERBOSE LOGGING
     if (opts.v) {
       console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',content: this.content.length + ' chars'}))
     }
   }
+}
+
+OceanMarkdown.prototype.mergeAllOptions = function(opts) {
+  // Set conversion options for saving
+  this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts)
+  // Get the full list of options for conversion
+  this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts)
 }
 
 /**
@@ -231,6 +162,88 @@ OceanMarkdown.prototype.mergeOptions = function(existing, merging) {
   return existing
 }
 
+OceanMarkdown.prototype.mergeMeta = function(merge) {
+  metaTemplate = {
+    // id: (should not be set or changed by scripts)
+    access: ['research', 'encumbered'],
+    author: ['string'],
+    language: ['string'],
+    priority: [5,6,7,8,9,10],
+    title: 'string',
+    titleShort: 'string',
+    ocnmd_version: 'number',
+    sourceUrl: 'string',
+    wordsCount: 'number',
+    category: 'string',
+    coverUrl: 'string',
+    documentType: 'string',
+    editor: ['string'],
+    needsEditing: 'boolean',
+    publicationName: 'string',
+    publicationEdition: 'string',
+    year: 'number',
+    authorAbrv: 'string',
+    titleAbrv: 'string',
+    collectionTitle: 'string',
+    collectionId: 'string',
+    collectionCoverUrl: 'string',
+    titleEn: 'string',
+    originalLang: 'string',
+    searchLang: ['string'],
+    translationRef: 'string',
+    translator: ['string'],
+    audio: 'boolean',
+    audioUrl: ['string'],
+    narrator: ['string'],
+    _convertedFrom: 'string'
+  }
+  Object.keys(metaTemplate).forEach(function(k) {
+    let type = typeof merge[k]
+    if (type !== 'undefined') {
+      // If metatemplate has an array of values
+      if (Array.isArray(metaTemplate[k])) {
+        // If the merge data is an array, test that the type of each is correct
+        if (Array.isArray(merge[k])) {
+          let newValue = []
+          for (let v of merge[k]) {
+            if (metaTemplate[k].indexOf(typeof v) !== -1) newValue.push(v)
+          }
+          if (newValue.length) this.meta[k] = newValue
+        }
+        else if ((metaTemplate[k].indexOf(type) !== -1) || (metaTemplate[k].indexOf[merge[k]] !== -1)) {
+          this.meta[k] = merge[k]
+        }
+      }
+      // If the type of data to be merged matches the template, merge it
+      else if (type === metaTemplate[k]) {
+        this.meta[k] = merge[k]
+      }
+    }
+  }.bind(this))
+}
+
+OceanMarkdown.prototype.fixMeta = function(input) {
+  let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n)(?:\.{2,6}|---)\s*\n/m)
+  if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
+    let newMatter = ('---' + testMatter[2] + '---\n')
+      // fix lines with apostrophes
+      .replace(/^( *)([\w_]+|'[^']'): .*'.*/mg, t => (/^[^:]+: '.*'$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
+      // fix lines with quotes
+      .replace(/^( *)([\w_]+|'[^']'): .*".*/mg, t => (/^[^:]+: ".*"$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
+      // fix lines with brackets
+      .replace(/^( *)([\w_]+|'[^']'): (.*?\[)/mg, '$1$2: >-\n$1  $3')
+      // fix lines with colons
+      .replace(/^( *)([\w_]+|'[^']'): (.*?: )/mg, '$1$2: >-\n$1  $3')
+      // fix lines with no value
+      .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'))/mg, '$1: \'\'\n')
+      // fix lines with values that are followed by un-indented multi-line values
+      .replace(/^([\w_]+|'[^']'): (.{3,}\r?\n)(?![\w_]+: |'[^']': |---)/gm, '$1: |\n  $2')
+      .replace(/^((?![\w_]+:[ \r\n]| '[^']':[ \r\n]|---)[^\s\r\n']+)/gm, '  $1')
+    // replace broken YFM with fixed
+    return input.replace(testMatter[0], newMatter)
+  }
+}
+
 OceanMarkdown.prototype.convert = function() {
 
   if (!this.raw) {
@@ -261,7 +274,7 @@ OceanMarkdown.prototype.convert = function() {
 }
 
 OceanMarkdown.prototype.cleanupText = function() {
-  this.replaceAll(this.cleanupPatterns)
+  this.replaceAll(this.opts.cleanupPatterns)
   return this
 }
 
@@ -340,56 +353,6 @@ OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
   return new RegExp(p, o)
 }
 
-OceanMarkdown.prototype._loadUrl = function(url) {
-  const request = require('request')
-  const cachedRequest = require('cached-request')(request).setValue('ttl', (60*60*24*30))
-  let doc = ''
-  cachedRequest({url: url}, (err, res, _) => {
-    if (err) {
-      throw err
-    }
-    doc = _
-  })
-  return doc
-}
-
-OceanMarkdown.prototype._loadFile = function(filePath, encoding = false) {
-  if (/\n/.test(filePath) || (filePath.length > 2048)) {
-    return false
-  }
-  
-  if (isUrl(filePath)) return this._loadUrl(filePath)
-
-  filePath = path.resolve(process.cwd(), filePath)
-
-  // Check if filePath exists
-  if (!sh.test('-f', filePath)) {
-    return false
-  }
-
-  // Load the file into a buffer
-  let fileBuffer = fs.readFileSync(filePath)
-
-  // For .md files, just use UTF-8
-  if (!encoding && /\.md$/.test(filePath)) {
-    return {
-      encoding: encoding,
-      content: iconv.decode(fileBuffer, 'UTF-8')
-    }
-  }
-
-  // If no encoding is specified, try to detect it
-  if (encoding === 'detect' || !encoding || encoding === true) {
-    encoding = chardet.detect(fileBuffer)
-  }
-
-  return {
-    encoding: encoding,
-    content: iconv.decode(fileBuffer, encoding)
-  }
-
-}
-
 OceanMarkdown.prototype.checkMeta = function() {
 
   // Upgrade from previous versions
@@ -462,7 +425,7 @@ OceanMarkdown.prototype.checkMeta = function() {
   this.meta.ocnmd_version = 1
 
   // Capture the word count in the poorly-named meta.wordsCount
-  this.meta.wordsCount = this.content.match(/\s+/gm).length // TODO: get a more accurate word count
+  this.meta.wordsCount = /\s/.test(this.content) ? this.content.match(/\s+/gm).length : this.meta.wordsCount // TODO: get a more accurate word count
 
   // Create a collection id if there is none
   if (this.meta.collectionTitle && !this.meta.collectionId) {
@@ -488,8 +451,11 @@ OceanMarkdown.prototype.checkMeta = function() {
 
 }
 
-OceanMarkdown.prototype.prepareRaw = function(data) {
-  this.raw = data
+OceanMarkdown.prototype.prepareRaw = function(data = false) {
+  if (data) {
+    this.raw = data
+  }
+  this.content = this.raw
 }
 
 module.exports = OceanMarkdown

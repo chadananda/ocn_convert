@@ -12,17 +12,18 @@ class TextToMarkdown extends OceanMarkdown {
    * the options to use when converting text, including:
    * --pageMarker (string): the pattern of page markers in the document
    */
-  constructor(input, opts = {}, meta = {}, raw = '') {
+  constructor(input, opts = {}) {
 
     // Fix single-entry patterns from parameters before building object
     for (let x of ['ch', 'fnRef', 'fnText', 'pg']) {
-      if (opts[x + 'Pattern'] && opts[x + 'Replacement']) {
-        opts[x + 'Patterns'][opts[x + 'Pattern']] = opts[x + 'Replacement']
+      if (opts[x + 'Pattern']) {
+        let p = opts[x + 'Pattern']
+        opts[x + 'Patterns'][p] = (opts[x + 'Replacement'] || '## $1')
         opts[x + 'Pattern'] = ''
       }
     }
 
-    super(input, opts, meta, raw)
+    super(input, opts)
 
     this.addDefaultConversionOpts({
 
@@ -109,9 +110,7 @@ class TextToMarkdown extends OceanMarkdown {
     
     })
 
-    // Get full list of options for conversion
-    this.opts = this.mergeOptions(this.defaultConversionOpts, opts)
-    this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts)
+    this.mergeAllOptions(opts)
 
   }
 }

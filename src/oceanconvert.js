@@ -6,11 +6,9 @@ const converters = {
   // pdf: require('./converters/pdfToMarkdown'),
   // pandoc: require('./converters/pandocToMarkdown'),
 }
-const fs = require('fs')
+const fp = require('./tools/filePath')
 const path = require('path')
 const sh = require('shelljs')
-const matter = require('gray-matter')
-const isUrl = require('is-url')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -137,7 +135,7 @@ Output options:
 }
 
 const opts = Object.assign({
-  inputFiles: args._.map(f => (isUrl(f) ? f : path.resolve(process.cwd(), f))),
+  inputFiles: args._.map(f => (fp.isUrl(f) ? f : path.resolve(process.cwd(), f))),
 }, args, {_: null})
 
 // Assign some variables here
@@ -162,108 +160,79 @@ for (filePath of opts.inputFiles) {
   try {
 
     // Check if filePath exists, or continue
-    if (!isUrl(filePath) && !sh.test('-f', filePath)) {
-      console.error(`Error: ${filePath} is not a file or url, skipping...`)
+    if (!fp.isUrl(filePath) && !sh.test('-f', filePath)) {
+      console.error(`${filePath} is not a file or url, skipping...`)
       continue
     }
-    
-    let doc
-    let meta = {}
+
     // Add metadata if necessary
     if (opts.e) {
-      Object.assign(meta, extractMeta(filePath))
+      Object.assign(opts, extractMeta(filePath))
     }
 
     // Get the path of the original file
-    let writeFilePath = _writeFilePath(filePath, meta)
+    let writeFilePath = _writeFilePath(filePath, opts)
 
-    // If we are reconverting...
+    // If we are reconverting an existing .md file, get the metadata from that file
     if (writeFilePath !== '-' && sh.test('-f', writeFilePath)) {
-      // Reconvert from a previously converted ocean markdown file
-      if (writeFilePath === filePath) {
-        doc = new converters[opts.c](writeFilePath, opts, meta)
-      }
-      // Reconvert from an original document or URL
-      else {
-        doc = new converters[opts.c](writeFilePath, opts, meta, filePath)
-      }
+      Object.assign(opts, fp.getMeta(filePath))
+    }
+
+    // If reconvert was called on the .md file itself, then use the _convertedFrom metadata to get the original
+    if ((filePath === writeFilePath) && opts._convertedFrom) {
+      filePath = opts._convertedFrom
+    }
+    
+    if (filePath !== writeFilePath && !opts._convertedFrom) {
+      opts._convertedFrom = filePath
+    }
+
+    // For encoding, use the specified encoding, or else the saved encoding, or else just detect it
+    let encoding
+    if (typeof opts.E !== "undefined") {
+      encoding = opts.E
     }
     else {
-      doc = new converters[opts.c](filePath, opts, meta)
+      encoding = opts.encoding || null
     }
 
-    if (opts.M) {
-    }
-    else {
-      doc.convert()
-    }
+    // Load the file and perform the actual conversion
+    fp.loadFile(filePath, encoding)
+    .then(file => {
 
-    // Save the file
-    writeFile(writeFilePath, doc)
+      if (file.encoding) {
+        opts.encoding = file.encoding
+      }
 
-    // Save debugging info
-    if (opts.d) {
-      Object.keys(doc.debugInfo).forEach(function(k) {
-        if (doc.debugInfo[k].length) {
-          writeFile(`${writeFilePath}.${k}.debug`, (typeof(doc.debugInfo[k]) === 'string' ? doc.debugInfo[k] : doc.debugInfo[k].join('\n')) + '\n')
-        }
-      })
-    }
+      let doc = new converters[opts.c](file.content, opts)
+      if (!opts.M) {
+        doc.convert()
+      }
 
-    doc = null
-    fileBuffer = null
-  }
-  catch(e) {
-    if (!opts.d) {
+      fp.writeFile(writeFilePath, doc)
+      
+      // Save debugging info
+      if (opts.d) {
+        Object.keys(doc.debugInfo).forEach(function(k) {
+          if (doc.debugInfo[k].length) {
+            fp.writeFile(`${writeFilePath}.${k}.debug`, (typeof(doc.debugInfo[k]) === 'string' ? doc.debugInfo[k] : doc.debugInfo[k].join('\n')) + '\n')
+          }
+        })
+      }
+    })
+    .catch(e => {
+      if (opts.d) {
+        throw e
+      }
       console.error(`Error converting ${filePath}: ${e.message}`)
-    }
-    else {
+    })
+  }
+  catch (e) {
+    if (opts.d) {
       throw e
     }
+    console.error(`Error converting ${filePath}: ${e.message}`)
   }
-}
-
-function extractMeta(filePath) {
-  let m = path.basename(filePath).match(/^(.+?)\s*,\s*(.+)\.[^\.]+$/)
-  if (m && m.length > 2) {
-    return {
-      author: m[1],
-      title: m[2],
-    }
-  }
-  else {
-    return {
-      author: path.dirname(filePath).split('/').pop(),
-      title: path.basename(filePath, path.extname(filePath)),
-    }
-  }
-}
-
-/**
- * Outputs a file to disk or stdout
- * @param {string} filePath
- * The full path of the file to write
- * @param {TextToMarkdown} doc
- * The converted object to write to the file 
- */
-function writeFile(filePath, doc) {
-  if (filePath) {
-    fs.writeFileSync(filePath, doc)
-    console.log(`Wrote "${filePath}"`)
-  }
-  else {
-    console.log(doc.toString())
-  }
-}
-
-/**
- * Retrieves metadata from the yaml front matter of an .md doc
- * 
- * @param {string} filePath 
- * the file path from which to retrieve the metadata
- */
-function _getMeta(filePath) {
-  return (sh.test('-f', filePath) ? matter(sh.head({'-n': 50}, filePath).toString() + "\n---").data : {})
 }
 
 /**
