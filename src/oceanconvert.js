@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
-const converters = {
-  text: require('./converters/textToMarkdown'),
-  html: require('./converters/htmlToMarkdown'),
-  // pdf: require('./converters/pdfToMarkdown'),
-  // pandoc: require('./converters/pandocToMarkdown'),
-}
+const converters = {}
 const fp = require('./tools/filePath')
 const path = require('path')
 const sh = require('shelljs')
+const converterRegex = /.+\/(\w+)ToMarkdown\.js/
+for (let f of sh.find(path.join(__dirname, 'converters'))) {
+  let match = f.match(converterRegex)
+  if (match) {
+    converters[match[1]] = require(match[0])
+  }
+}
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -158,6 +160,7 @@ if (opts.o && !sh.test('-e', opts.o)) {
 
 for (filePath of opts.inputFiles) {
   try {
+    let fileOpts = Object.assign({}, opts)
 
     // Check if filePath exists, or continue
     if (!fp.isUrl(filePath) && !sh.test('-f', filePath)) {
@@ -166,34 +169,35 @@ for (filePath of opts.inputFiles) {
     }
 
     // Add metadata if necessary
-    if (opts.e) {
-      Object.assign(opts, extractMeta(filePath))
+    if (fileOpts.e) {
+      Object.assign(fileOpts, extractMeta(filePath))
     }
 
     // Get the path of the original file
-    let writeFilePath = _writeFilePath(filePath, opts)
+    let writeFilePath = _writeFilePath(filePath, fileOpts)
 
     // If we are reconverting an existing .md file, get the metadata from that file
     if (writeFilePath !== '-' && sh.test('-f', writeFilePath)) {
-      Object.assign(opts, fp.getMeta(filePath))
+      let savedMeta = fp.getMeta(filePath)
+      Object.assign(fileOpts, savedMeta || {}, savedMeta._conversionOpts || {})
     }
 
     // If reconvert was called on the .md file itself, then use the _convertedFrom metadata to get the original
-    if ((filePath === writeFilePath) && opts._convertedFrom) {
-      filePath = opts._convertedFrom
+    if ((filePath === writeFilePath) && fileOpts._convertedFrom) {
+      filePath = fileOpts._convertedFrom
     }
     
-    if (filePath !== writeFilePath && !opts._convertedFrom) {
-      opts._convertedFrom = filePath
+    if (filePath !== writeFilePath && !fileOpts._convertedFrom) {
+      fileOpts._convertedFrom = filePath
     }
 
     // For encoding, use the specified encoding, or else the saved encoding, or else just detect it
     let encoding
-    if (typeof opts.E !== "undefined") {
-      encoding = opts.E
+    if (typeof fileOpts.E !== "undefined") {
+      encoding = fileOpts.E
     }
     else {
-      encoding = opts.encoding || null
+      encoding = fileOpts.encoding || null
     }
 
     // Load the file and perform the actual conversion
@@ -201,18 +205,18 @@ for (filePath of opts.inputFiles) {
     .then(file => {
 
       if (file.encoding) {
-        opts.encoding = file.encoding
+        fileOpts.encoding = file.encoding
       }
 
-      let doc = new converters[opts.c](file.content, opts)
-      if (!opts.M) {
+      let doc = new converters[(fileOpts.converter || 'text')](file.content, fileOpts)
+      if (!fileOpts.M) {
         doc.convert()
       }
 
       fp.writeFile(writeFilePath, doc)
       
       // Save debugging info
-      if (opts.d) {
+      if (fileOpts.d) {
         Object.keys(doc.debugInfo).forEach(function(k) {
           if (doc.debugInfo[k].length) {
             fp.writeFile(`${writeFilePath}.${k}.debug`, (typeof(doc.debugInfo[k]) === 'string' ? doc.debugInfo[k] : doc.debugInfo[k].join('\n')) + '\n')
@@ -221,14 +225,14 @@ for (filePath of opts.inputFiles) {
       }
     })
     .catch(e => {
-      if (opts.d) {
+      if (fileOpts.d) {
         throw e
       }
       console.error(`Error converting ${filePath}: ${e.message}`)
     })
   }
   catch (e) {
-    if (opts.d) {
+    if (fileOpts.d) {
       throw e
     }
     console.error(`Error converting ${filePath}: ${e.message}`)

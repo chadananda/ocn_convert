@@ -85,9 +85,9 @@ class OceanMarkdown{
 
 OceanMarkdown.prototype.mergeAllOptions = function(opts) {
   // Set conversion options for saving
-  this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts, opts)
+  this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts || {}, opts || {})
   // Get the full list of options for conversion
-  this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts)
+  this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts || {})
 }
 
 /**
@@ -324,15 +324,19 @@ OceanMarkdown.prototype.replaceAll = function(search, replace = false, pre = '',
   if (typeof replace === 'string') {
     search = (typeof search === 'string' ? [search] : [...search])
     search.forEach(k => {
-      this.content = this.content.replace(this.toRegExp(k, pre, post), replace)
+      this.content = this.content.replace(this.toRegExp(k, pre, post), _normalizeRegexReplacements(replace))
     })
   }
   else if (typeof search === 'object' && !Array.isArray(search)) {
     Object.keys(search).forEach(k => {
-      this.content = this.content.replace(this.toRegExp(k, pre, post), search[k])
+      if (search[k]) this.content = this.content.replace(this.toRegExp(k, pre, post), _normalizeRegexReplacements(search[k]))
     })
   }
   return this
+}
+
+function _normalizeRegexReplacements(text) {
+  return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t')
 }
 
 OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {

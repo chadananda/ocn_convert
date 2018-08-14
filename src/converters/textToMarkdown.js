@@ -26,6 +26,7 @@ class TextToMarkdown extends OceanMarkdown {
     super(input, opts)
 
     this.addDefaultConversionOpts({
+      converter: 'text',
 
       // Chapters
       chPatterns: {},
