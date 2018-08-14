@@ -25,7 +25,7 @@ module.exports = {
    */
   getMeta: function(filePath) {
     if (!isUrl(filePath) && sh.test('-f', filePath)) {
-      return matter(sh.head().toString() + "\n---\n").data
+      return matter(sh.head({'-n': 99}, filePath).toString() + "\n---\n").data
     }
     return {}
   },
