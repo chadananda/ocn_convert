@@ -1,7 +1,7 @@
 .DS_Store
 /output/
-/converters/*/
-/spiders/*/
+/src/converters/*/
+/src/spiders/*/
 
 # Logs
 logs
