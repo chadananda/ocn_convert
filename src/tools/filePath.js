@@ -1,12 +1,10 @@
 const isUrl = require('is-url')
 const fs = require('fs')
+const { promisify } = require('util')
+const writeFile = promisify(fs.writeFile)
 const path = require('path')
 const sh = require('shelljs')
 const matter = require('gray-matter')
-const { promisify } = require ('util')
-const readFile = promisify(fs.readFile)
-const chardet = require('chardet')
-const iconv = require('iconv-lite')
 
 module.exports = {
   isUrl: isUrl,
@@ -48,58 +46,41 @@ module.exports = {
 
   loadUrl: async function(url, encoding = null) {
     const request = require('request')
-    const cachedRequest = require('cached-request')(request).setValue('ttl', (60*60*24*30))
+    const cachedRequest = require('cached-request')(request)
+    cachedRequest.setCacheDirectory('./cache')
+    cachedRequest.setValue('ttl', (60*60*24*30))
 
     // Set the encoding for the request, unless it is specifically set to 0 || false
     if (encoding || (encoding === null)) {
       cachedRequest.setValue('encoding', encoding)
     }
 
-    let doc = await cachedRequest({url: url}, (err, res, _) => {
-      if (err) {
-        throw err
-      }
-      doc = _
-    })
+    let stream = await cachedRequest({url: url})
 
-    return doc._
+    return stream
   },
 
-  loadFile: async function(filePath, encoding = null) {
-    let fileBuffer
+  load: async function(pathOrUrl) {
+    let stream
 
-    if (isUrl(filePath)) {
-      fileBuffer = await this.loadUrl(filePath, encoding)
+    if (isUrl(pathOrUrl)) {
+      // Load the url using a request
+      stream = await this.loadUrl(pathOrUrl)
+      return stream
     }
     else {
-      filePath = path.resolve(process.cwd(), filePath)
+      filePath = path.resolve(process.cwd(), pathOrUrl)
   
       // Check if filePath exists
-      if (!sh.test('-f', filePath)) {
+      if (!sh.test('-f', pathOrUrl)) {
         return false
       }
     
-      // Load the file into a buffer
-      fileBuffer = await readFile(filePath)
+      // Load the file into a stream
+      stream = fs.createReadStream(pathOrUrl)
 
-      // For .md files, just use UTF-8
-      if ((!encoding || encoding === null) && /\.md$/.test(filePath)) {
-        return {
-          encoding: encoding,
-          content: iconv.decode(fileBuffer, 'UTF-8')
-        }
-      }
     }
-  
-    // If no encoding is specified, try to detect it
-    if (!encoding || encoding === null) {
-      encoding = chardet.detect(fileBuffer)
-    }
-  
-    return {
-      encoding: encoding,
-      content: iconv.decode(fileBuffer, encoding)
-    }
+    return stream
   },
 
   /**
@@ -109,14 +90,15 @@ module.exports = {
    * @param {TextToMarkdown} doc
    * The converted object to write to the file 
    */
-  writeFile: function(filePath, doc) {
+  writeFile: async function(filePath, doc) {
     if (filePath && filePath !== '-') {
-      fs.writeFileSync(filePath, doc)
+      await writeFile(filePath, doc)
       console.log(`Wrote "${filePath}"`)
     }
     else {
       console.log(doc.toString())
     }
+    return true
   },
 
 }

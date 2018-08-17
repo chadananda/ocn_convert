@@ -9,6 +9,7 @@ const matter = require('gray-matter')
 const wordlist = [...require('an-array-of-english-words'), ...require('an-array-of-french-words')]
 const path = require('path')
 const tr = require('transliteration').slugify
+const iconv = require('iconv-lite')
 
 class OceanMarkdown{
 
@@ -80,6 +81,22 @@ class OceanMarkdown{
     if (opts.v) {
       console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',content: this.content.length + ' chars'}))
     }
+  }
+}
+
+  /**
+   * 
+   * @param {stream} stream The stream to be used when preparing content for the OceanMarkdown object
+   * @param {*} opts 
+   */
+OceanMarkdown.prototype.prepareStream = async function(stream, opts = {}) {
+  let textBuffer = await require('raw-body')(stream)
+
+  encoding = (typeof opts.encoding === 'string' ? opts.encoding : chardet.detect(textBuffer))
+
+  return {
+    encoding: encoding,
+    content: iconv.decode(textBuffer, encoding),
   }
 }
 
@@ -460,6 +477,10 @@ OceanMarkdown.prototype.prepareRaw = function(data = false) {
     this.raw = data
   }
   this.content = this.raw
+}
+
+OceanMarkdown.prototype.getConverter = async function(contentType, stream, opts) {
+  return require('../index')(contentType, stream, opts || {})
 }
 
 module.exports = OceanMarkdown

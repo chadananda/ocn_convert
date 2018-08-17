@@ -24,6 +24,7 @@
     "is-url": "^1.2.4",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
+    "raw-body": "^2.3.3",
     "request": "^2.87.0",
     "shelljs": "^0.8.2",
     "transliteration": "^1.6.2",

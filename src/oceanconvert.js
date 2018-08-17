@@ -1,16 +1,9 @@
 #!/usr/bin/env node
 
-const converters = {}
 const fp = require('./tools/filePath')
 const path = require('path')
 const sh = require('shelljs')
-const converterRegex = /.+\/(\w+)ToMarkdown\.js/
-for (let f of sh.find(path.join(__dirname, 'converters'))) {
-  let match = f.match(converterRegex)
-  if (match) {
-    converters[match[1]] = require(match[0])
-  }
-}
+const getConverter = require('./index')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -141,7 +134,7 @@ const opts = Object.assign({
 }, args, {_: null})
 
 // Assign some variables here
-if (!opts.c) opts.c = 'text'
+if (!opts.converter) opts.converter = 'text'
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.cwd(), opts.p)
 if (opts.b || opts.B) opts.correctBahaiWords = opts.b || !opts.B
@@ -159,13 +152,15 @@ if (opts.o && !sh.test('-e', opts.o)) {
 
 
 for (filePath of opts.inputFiles) {
-  try {
-    let fileOpts = Object.assign({}, opts)
+  _process(filePath, Object.assign({}, opts))
+}
 
+async function _process(filePath, fileOpts) {
+  try {
     // Check if filePath exists, or continue
     if (!fp.isUrl(filePath) && !sh.test('-f', filePath)) {
       console.error(`${filePath} is not a file or url, skipping...`)
-      continue
+      return false
     }
 
     // Add metadata if necessary
@@ -191,45 +186,25 @@ for (filePath of opts.inputFiles) {
       fileOpts._convertedFrom = filePath
     }
 
-    // For encoding, use the specified encoding, or else the saved encoding, or else just detect it
-    let encoding
-    if (typeof fileOpts.E !== "undefined") {
-      encoding = fileOpts.E
-    }
-    else {
-      encoding = fileOpts.encoding || null
-    }
-
     // Load the file and perform the actual conversion
-    fp.loadFile(filePath, encoding)
-    .then(file => {
+    let stream = await fp.load(filePath)
+    let doc = await getConverter(fileOpts.converter, stream, fileOpts)
 
-      if (file.encoding) {
-        fileOpts.encoding = file.encoding
-      }
+    if (!fileOpts.M) {
+      doc.convert()
+    }
 
-      let doc = new converters[(fileOpts.converter || 'text')](file.content, fileOpts)
-      if (!fileOpts.M) {
-        doc.convert()
-      }
-
-      fp.writeFile(writeFilePath, doc)
+    await fp.writeFile(writeFilePath, doc)
       
-      // Save debugging info
-      if (fileOpts.d) {
-        Object.keys(doc.debugInfo).forEach(function(k) {
-          if (doc.debugInfo[k].length) {
-            fp.writeFile(`${writeFilePath}.${k}.debug`, (typeof(doc.debugInfo[k]) === 'string' ? doc.debugInfo[k] : doc.debugInfo[k].join('\n')) + '\n')
-          }
-        })
-      }
-    })
-    .catch(e => {
-      if (fileOpts.d) {
-        throw e
-      }
-      console.error(`Error converting ${filePath}: ${e.message}`)
-    })
+    // Save debugging info
+    if (fileOpts.d) {
+      Object.keys(doc.debugInfo).forEach(async (k) => {
+        if (doc.debugInfo[k].length) {
+          await fp.writeFile(`${writeFilePath}.${k}.debug`, (typeof(doc.debugInfo[k]) === 'string' ? doc.debugInfo[k] : doc.debugInfo[k].join('\n')) + '\n')
+        }
+      })
+    }
+    
   }
   catch (e) {
     if (fileOpts.d) {
