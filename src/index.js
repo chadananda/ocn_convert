@@ -20,9 +20,17 @@ for (let f of sh.find(path.join(__dirname, 'converters'))) {
  * @param {object} opts A set of options and metadata for the conversion object.
  */
 async function getConverter(contentType, stream, opts = {}) {
-  let text = await Converters[contentType].prototype.prepareStream(stream, opts)
-  opts.encoding = text.encoding
-  return new Converters[contentType](text.content, opts)
+  let text
+  if (opts.M) { // JUST WORK ON EXISTING FILE
+    let fileOpts = Object.assign({}, opts, {encoding: null})
+    text = await Converters['text'].prototype.prepareStream(stream, fileOpts)
+    return new Converters[contentType](text.content, opts)
+  }
+  else { // Work on original content
+    text = await Converters[contentType].prototype.prepareStream(stream, opts)
+    opts.encoding = text.encoding
+    return new Converters[contentType](text.content, opts)
+  }
 }
 
 module.exports = getConverter

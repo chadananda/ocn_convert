@@ -135,6 +135,7 @@ const opts = Object.assign({
 
 // Assign some variables here
 if (!opts.converter) opts.converter = 'text'
+if (opts.fixMeta || opts.M) { opts.M = true; opts.r = true; }
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.cwd(), opts.p)
 if (opts.b || opts.B) opts.correctBahaiWords = opts.b || !opts.B
@@ -173,15 +174,22 @@ async function _process(filePath, fileOpts) {
 
     // If we are reconverting an existing .md file, get the metadata from that file
     if (writeFilePath !== '-' && sh.test('-f', writeFilePath)) {
-      let savedMeta = fp.getMeta(filePath)
+      let savedMeta = fp.getMeta(writeFilePath, fileOpts.fixMeta || false)
       Object.assign(fileOpts, savedMeta || {}, savedMeta._conversionOpts || {})
     }
 
-    // If reconvert was called on the .md file itself, then use the _convertedFrom metadata to get the original
-    if ((filePath === writeFilePath) && fileOpts._convertedFrom) {
+    // If we are fixing metadata, just use the writeFilePath
+    if (opts.M) {
+      filePath = writeFilePath
+    }
+
+    // Otherwise, and if reconvert was called on the .md file itself, 
+    // then use the _convertedFrom metadata to get the original data
+    else if ((filePath === writeFilePath) && fileOpts._convertedFrom) {
       filePath = fileOpts._convertedFrom
     }
     
+    // If we are converting a new file, add _convertedFrom
     if (filePath !== writeFilePath && !fileOpts._convertedFrom) {
       fileOpts._convertedFrom = filePath
     }
