@@ -1,4 +1,5 @@
 const isUrl = require('is-url')
+const OceanMarkdown = require('../converters/oceanMarkdown')
 const fs = require('fs')
 const { promisify } = require('util')
 const writeFile = promisify(fs.writeFile)
@@ -21,9 +22,13 @@ module.exports = {
    * @param {string} filePath
    * the file path from which to retrieve the metadata
    */
-  getMeta: function(filePath) {
+  getMeta: function(filePath, fixMeta = false) {
     if (!isUrl(filePath) && sh.test('-f', filePath)) {
-      return matter(sh.head({'-n': 99}, filePath).toString() + "\n---\n").data
+      let text = sh.head({'-n': 99}, filePath).toString() + "\n---\n"
+      if (fixMeta) {
+        text = OceanMarkdown.prototype.fixMeta(text)
+      }
+      if (matter.test(text)) return matter(text).data
     }
     return {}
   },
