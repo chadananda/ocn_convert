@@ -10,6 +10,7 @@ const wordlist = [...require('an-array-of-english-words'), ...require('an-array-
 const path = require('path')
 const tr = require('transliteration').slugify
 const iconv = require('iconv-lite')
+const chardet = require('chardet')
 
 class OceanMarkdown{
 
@@ -244,21 +245,22 @@ OceanMarkdown.prototype.fixMeta = function(input) {
   if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
     let newMatter = ('---' + testMatter[2] + '---\n')
       // fix lines with apostrophes
-      .replace(/^( *)([\w_]+|'[^']'): .*'.*/mg, t => (/^[^:]+: '.*'$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
+      .replace(/^( *)([\w_]+|'[^']'): .*'.*/mg, t => (/^[^:]+: '[^']*'$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
       // fix lines with quotes
-      .replace(/^( *)([\w_]+|'[^']'): .*".*/mg, t => (/^[^:]+: ".*"$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
+      .replace(/^( *)([\w_]+|'[^']'): .*".*/mg, t => (/^[^:]+: "[^"]*"$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
       // fix lines with brackets
       .replace(/^( *)([\w_]+|'[^']'): (.*?\[)/mg, '$1$2: >-\n$1  $3')
       // fix lines with colons
       .replace(/^( *)([\w_]+|'[^']'): (.*?: )/mg, '$1$2: >-\n$1  $3')
       // fix lines with no value
-      .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'))/mg, '$1: \'\'\n')
+      .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'|-))/mg, '$1: \'\'\n')
       // fix lines with values that are followed by un-indented multi-line values
       .replace(/^([\w_]+|'[^']'): (.{3,}\r?\n)(?![\w_]+: |'[^']': |---)/gm, '$1: |\n  $2')
       .replace(/^((?![\w_]+:[ \r\n]| '[^']':[ \r\n]|---)[^\s\r\n']+)/gm, '  $1')
     // replace broken YFM with fixed
     return input.replace(testMatter[0], newMatter)
   }
+  return input
 }
 
 OceanMarkdown.prototype.convert = function() {
