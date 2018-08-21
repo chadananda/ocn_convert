@@ -4,6 +4,8 @@ const fp = require('./tools/filePath')
 const path = require('path')
 const sh = require('shelljs')
 const getConverter = require('./index')
+const Sema = require('async-sema')
+const s = new Sema(4)
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -41,6 +43,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'E',
   ],
   alias: {
+    fixmeta: 'fixMeta',
     verbose: 'v',
     bahai: 'b',
     noBahai: 'B',
@@ -134,7 +137,7 @@ const opts = Object.assign({
 }, args, {_: null})
 
 // Assign some variables here
-if (!opts.converter) opts.converter = 'text'
+if (!opts.c) opts.c = 'text'
 if (opts.fixMeta || opts.M) { opts.M = true; opts.r = true; }
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.cwd(), opts.p)
@@ -157,6 +160,7 @@ for (filePath of opts.inputFiles) {
 }
 
 async function _process(filePath, fileOpts) {
+  await s.acquire()
   try {
     // Check if filePath exists, or continue
     if (!fp.isUrl(filePath) && !sh.test('-f', filePath)) {
@@ -196,14 +200,14 @@ async function _process(filePath, fileOpts) {
 
     // Load the file and perform the actual conversion
     let stream = await fp.load(filePath)
-    let doc = await getConverter(fileOpts.converter, stream, fileOpts)
+    let doc = await getConverter(fileOpts.c, stream, fileOpts)
 
     if (!fileOpts.M) {
       doc.convert()
     }
 
     await fp.writeFile(writeFilePath, doc)
-      
+
     // Save debugging info
     if (fileOpts.d) {
       Object.keys(doc.debugInfo).forEach(async (k) => {
@@ -213,13 +217,20 @@ async function _process(filePath, fileOpts) {
       })
     }
     
+    if (doc.metaErrors.length) {
+      process.exitCode = 1
+      console.error(`${filePath} has bad/missing metadata (${doc.metaErrors.join(', ')})`)
+    }
+
   }
   catch (e) {
     if (fileOpts.d) {
       throw e
     }
+    process.exitCode = 1
     console.error(`Error converting ${filePath}: ${e.message}`)
   }
+  s.release()
 }
 
 /**

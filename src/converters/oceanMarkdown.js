@@ -11,6 +11,42 @@ const path = require('path')
 const tr = require('transliteration').slugify
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
+const { crc32 } = require('crc')
+
+const metaTemplate = {
+  // id: (should not be set or changed by scripts)
+  access: ['research', 'encumbered'],
+  author: ['string'],
+  language: ['string'],
+  priority: [5,6,7,8,9,10],
+  title: 'string',
+  titleShort: 'string',
+  ocnmd_version: 'number',
+  sourceUrl: 'string',
+  wordsCount: 'number',
+  category: 'string',
+  coverUrl: 'string',
+  documentType: 'string',
+  editor: ['string'],
+  needsEditing: 'boolean',
+  publicationName: 'string',
+  publicationEdition: 'string',
+  year: 'number',
+  authorAbrv: 'string',
+  titleAbrv: 'string',
+  collectionTitle: 'string',
+  collectionId: 'string',
+  collectionCoverUrl: 'string',
+  titleEn: 'string',
+  originalLang: 'string',
+  searchLang: ['string'],
+  translationRef: 'string',
+  translator: ['string'],
+  audio: 'boolean',
+  audioUrl: ['string'],
+  narrator: ['string'],
+  _convertedFrom: 'string'
+}
 
 class OceanMarkdown{
 
@@ -27,6 +63,9 @@ class OceanMarkdown{
     // RAW DATA
     let fromInput = matter(input)
     this.raw = fromInput.content || ''
+
+    // METADATA ERROR CHECKING
+    this.metaErrors = []
 
     // METADATA
     this.meta = Object.assign({
@@ -181,40 +220,6 @@ OceanMarkdown.prototype.mergeOptions = function(existing, merging) {
 }
 
 OceanMarkdown.prototype.mergeMeta = function(merge) {
-  metaTemplate = {
-    // id: (should not be set or changed by scripts)
-    access: ['research', 'encumbered'],
-    author: ['string'],
-    language: ['string'],
-    priority: [5,6,7,8,9,10],
-    title: 'string',
-    titleShort: 'string',
-    ocnmd_version: 'number',
-    sourceUrl: 'string',
-    wordsCount: 'number',
-    category: 'string',
-    coverUrl: 'string',
-    documentType: 'string',
-    editor: ['string'],
-    needsEditing: 'boolean',
-    publicationName: 'string',
-    publicationEdition: 'string',
-    year: 'number',
-    authorAbrv: 'string',
-    titleAbrv: 'string',
-    collectionTitle: 'string',
-    collectionId: 'string',
-    collectionCoverUrl: 'string',
-    titleEn: 'string',
-    originalLang: 'string',
-    searchLang: ['string'],
-    translationRef: 'string',
-    translator: ['string'],
-    audio: 'boolean',
-    audioUrl: ['string'],
-    narrator: ['string'],
-    _convertedFrom: 'string'
-  }
   Object.keys(metaTemplate).forEach(function(k) {
     let type = typeof merge[k]
     if (type !== 'undefined') {
@@ -428,24 +433,31 @@ OceanMarkdown.prototype.checkMeta = function() {
       delete this.meta.audio
     }
 
-    if (typeof this.meta.author === 'string' && this.meta.author.length) {
-      this.meta.author = new BahaiAutocorrect(this.meta.author).correct().stripUnderlines().toString()
+  }
+  else {
+    switch(this.meta.ocnmd_version) {
+      case 1:
+        this.meta.id = '' // Recalculate all ids because colons cause problems if used as filenames
+        break;
     }
-    else {
-      this.meta.author = ''
-    }
-
-    if (typeof this.meta.title === 'string' && this.meta.title.length) {
-      this.meta.title = new BahaiAutocorrect(this.meta.title).correct().stripUnderlines().toString()
-    }
-    else {
-      this.meta.title = ''
-    }
-
   }
 
   // Save ocnmd_version
-  this.meta.ocnmd_version = 1
+  this.meta.ocnmd_version = 2
+
+  // Correct author and title
+  for (let k of ['author', 'title']) {
+    if (typeof this.meta[k] === 'undefined') this.setMetaError(k)
+    else if (typeof this.meta[k] === 'string' && this.meta[k]) {
+      this.meta[k] = new BahaiAutocorrect(this.meta[k]).correct().stripUnderlines().toString()
+    }
+    else if (Array.isArray(this.meta[k]) && this.meta[k].length) {
+      this.meta[k] = this.meta[k].map(v => { return new BahaiAutocorrect(v).correct().stripUnderlines().toString() })
+    }
+    else {
+      this.setMetaError(k)
+    }
+  }
 
   // Capture the word count in the poorly-named meta.wordsCount
   this.meta.wordsCount = /\s/.test(this.content) ? this.content.match(/\s+/gm).length : this.meta.wordsCount // TODO: get a more accurate word count
@@ -461,16 +473,34 @@ OceanMarkdown.prototype.checkMeta = function() {
   // Ensure that the document has an ID
   if (typeof this.meta.id === 'undefined' || !this.meta.id || this.meta.id === '') {
     let trOptions = {
-      ignore: [':'],
+      ignore: ['_'],
     }
-    let rawId = [(this.meta.author || this.meta.publicationName || 'unknown'), (this.meta.titleEn || this.meta.title).replace(':', ' '), this.meta.language].join(':')
-      .replace(/[_‘’'\(\)]/g, '')
+    let rawId = `${(this.meta.author || this.meta.publicationName || 'unknown')}::${(this.meta.titleEn || this.meta.title).replace(':', ' ')}::${crc32(this.content)}::${this.meta.language}`
+      .replace(/[_‘’'\(\)]/g, '').replace(/::/g, '__')
     this.meta.id = tr(rawId, trOptions)
-      .replace(/:(?:a|an|the)-/, ':')
+      .replace(/__(?:a|an|the)-/, '__')
       .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
       .replace(/-(?:and|but|or|nor|for|a|an|the|some|on|of)-/g, '-')
-      .replace(/-?:-?/g, ':')
+      .replace(/-?__-?/g, '__')
   }
+
+  for (let k of ['access', 'language', 'priority', 'id']) {
+    if (!(
+      (
+        typeof this.meta[k] !== metaTemplate[k] &&
+        this.meta[k]
+      )
+      ||
+      (
+        Array.isArray(metaTemplate[k]) &&
+        (
+          metaTemplate[k].indexOf(this.meta[k]) ||
+          metaTemplate[k].indexOf(this.meta[k][0])
+        )
+      )
+    )) this.setMetaError(k)
+  }
+  if (this.meta.id.length > 255) this.setMetaError('id')
 
 }
 
@@ -483,6 +513,10 @@ OceanMarkdown.prototype.prepareRaw = function(data = false) {
 
 OceanMarkdown.prototype.getConverter = async function(contentType, stream, opts) {
   return require('../index')(contentType, stream, opts || {})
+}
+
+OceanMarkdown.prototype.setMetaError = function(key) {
+  if (this.metaErrors.indexOf(key) === -1) this.metaErrors.push(key)
 }
 
 module.exports = OceanMarkdown
