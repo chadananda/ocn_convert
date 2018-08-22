@@ -247,7 +247,7 @@ OceanMarkdown.prototype.mergeMeta = function(merge) {
 
 OceanMarkdown.prototype.fixMeta = function(input) {
   let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n*)(?:\s*\n\.{2,6}|---)\s*\n/m)
-  if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
+  if (Array.isArray(testMatter) && testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
     let newMatter = ('---' + testMatter[2] + '\n---\n')
       // fix double line breaks, in case there was an extra one at the end of the front matter.
       .replace('\n\n', '\n')
@@ -469,8 +469,8 @@ OceanMarkdown.prototype.checkMeta = function() {
   // Remove blank encoding
   if (this.meta._conversionOpts.encoding === '') delete this.meta._conversionOpts.encoding
 
-  // Ensure that the document has an ID
-  if (typeof this.meta.id === 'undefined' || !this.meta.id || this.meta.id === '') {
+  // Ensure that the document has an ID if other fields are ready
+  if (this.meta.title && (this.meta.author || this.meta.publicationName) && (typeof this.meta.id === 'undefined' || !this.meta.id || this.meta.id === '')) {
     let trOptions = {
       ignore: ['_'],
     }
