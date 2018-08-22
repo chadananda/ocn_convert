@@ -253,14 +253,20 @@ OceanMarkdown.prototype.fixMeta = function(input) {
       .replace('\n\n', '\n')
       // fix lines that are only quotation marks (this happens if we've previously messed it up)
       .replace(/^( *)([\w_]+|'[^']'): ['"]('+)['"]$/mg, '$1$2: >-\n$1  ')
+      // Fix lines with multiple values on one line
+      .replace(/^( *)(author|translator): '?(.*[- á].*, .*[- á].*[^'])'?$/gm, (t, sp, name, val) => {
+        return `${sp}${name}:\n${sp}  - ${val.split(',').join(`\n${sp}  - `)}`
+      })
       // fix lines with apostrophes, quotes, brackets, and colons
-      .replace(/^( *)([\w_]+|'[^']'): ['"](.*)['"]$/mg, '$1$2: >-\n$1  $3')
+      .replace(/^( *)([\w_]+|'[^']'): ['"](.*)['"]$/mg, (t, p1, p2, p3) => {return `${p1}${p2}: >-\n${p1}  ${p3.replace(/'+/g, "'")}`})
       .replace(/^( *)([\w_]+|'[^']'): (.*?['"\[\]:].*)$/mg, '$1$2: >-\n$1  $3')
       // fix lines with no value
       .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'|-))/mg, '$1: \'\'\n')
       // fix lines with values that are followed by un-indented multi-line values
       .replace(/^([\w_]+|'[^']'): (.{3,}\r?\n)(?![\w_]+: |'[^']': |---)/gm, '$1: |\n  $2')
       .replace(/^((?![\w_]+:[ \r\n]| '[^']':[ \r\n]|---)[^\s\r\n']+)/gm, '  $1')
+      // fix lines that have multiple apostrophes
+      .replace(/^( +)'''(.+)\n(.+)'''/gm, '$1$2$3')
     // replace broken YFM with fixed
     return input.replace(testMatter[0], newMatter)
   }
