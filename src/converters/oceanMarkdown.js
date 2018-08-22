@@ -249,14 +249,9 @@ OceanMarkdown.prototype.fixMeta = function(input) {
   let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n)(?:\.{2,6}|---)\s*\n/m)
   if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
     let newMatter = ('---' + testMatter[2] + '---\n')
-      // fix lines with apostrophes
-      .replace(/^( *)([\w_]+|'[^']'): .*'.*/mg, t => (/^[^:]+: '[^']*'$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
-      // fix lines with quotes
-      .replace(/^( *)([\w_]+|'[^']'): .*".*/mg, t => (/^[^:]+: "[^"]*"$/.test(t) ? t : t.replace(/^( *)([\w_]+|'[^']'): /, '$1$2: >-\n$1  ')) )
-      // fix lines with brackets
-      .replace(/^( *)([\w_]+|'[^']'): (.*?\[)/mg, '$1$2: >-\n$1  $3')
-      // fix lines with colons
-      .replace(/^( *)([\w_]+|'[^']'): (.*?: )/mg, '$1$2: >-\n$1  $3')
+      // fix lines with apostrophes, quotes, brackets, and colons
+      .replace(/^( *)([\w_]+|'[^']'): ['"](.+)['"]$/mg, '$1$2: >-\n$1  $3')
+      .replace(/^( *)([\w_]+|'[^']'): (.*?['"\[\]:].*)$/mg, '$1$2: >-\n$1  $3')
       // fix lines with no value
       .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'|-))/mg, '$1: \'\'\n')
       // fix lines with values that are followed by un-indented multi-line values
