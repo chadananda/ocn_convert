@@ -246,9 +246,11 @@ OceanMarkdown.prototype.mergeMeta = function(merge) {
 }
 
 OceanMarkdown.prototype.fixMeta = function(input) {
-  let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n)(?:\.{2,6}|---)\s*\n/m)
+  let testMatter = input.match(/^([\s\S]*?)(?:\.{2,6}|---)\s*(\n[\s\S]+?\n*)(?:\s*\n\.{2,6}|---)\s*\n/m)
   if (testMatter[1] === "" && !/\n\n/.test(testMatter[2])) {
-    let newMatter = ('---' + testMatter[2] + '---\n')
+    let newMatter = ('---' + testMatter[2] + '\n---\n')
+      // fix double line breaks, in case there was an extra one at the end of the front matter.
+      .replace('\n\n', '\n')
       // fix lines with apostrophes, quotes, brackets, and colons
       .replace(/^( *)([\w_]+|'[^']'): ['"](.+)['"]$/mg, '$1$2: >-\n$1  $3')
       .replace(/^( *)([\w_]+|'[^']'): (.*?['"\[\]:].*)$/mg, '$1$2: >-\n$1  $3')
