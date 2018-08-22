@@ -251,8 +251,10 @@ OceanMarkdown.prototype.fixMeta = function(input) {
     let newMatter = ('---' + testMatter[2] + '\n---\n')
       // fix double line breaks, in case there was an extra one at the end of the front matter.
       .replace('\n\n', '\n')
+      // fix lines that are only quotation marks (this happens if we've previously messed it up)
+      .replace(/^( *)([\w_]+|'[^']'): ['"]('+)['"]$/mg, '$1$2: >-\n$1  ')
       // fix lines with apostrophes, quotes, brackets, and colons
-      .replace(/^( *)([\w_]+|'[^']'): ['"](.+)['"]$/mg, '$1$2: >-\n$1  $3')
+      .replace(/^( *)([\w_]+|'[^']'): ['"](.*)['"]$/mg, '$1$2: >-\n$1  $3')
       .replace(/^( *)([\w_]+|'[^']'): (.*?['"\[\]:].*)$/mg, '$1$2: >-\n$1  $3')
       // fix lines with no value
       .replace(/^( *(?:[\w_]+|'[^']')): *\r?\n(?! {2,}(?:[\w_]+:|'|-))/mg, '$1: \'\'\n')
