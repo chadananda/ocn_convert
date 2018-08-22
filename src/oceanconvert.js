@@ -170,7 +170,7 @@ async function _process(filePath, fileOpts) {
 
     // Add metadata if necessary
     if (fileOpts.e) {
-      Object.assign(fileOpts, extractMeta(filePath))
+      Object.assign(fileOpts, fp.extractMetaFromName(filePath))
     }
 
     // Get the path of the original file
