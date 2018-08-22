@@ -160,6 +160,7 @@ for (filePath of opts.inputFiles) {
 }
 
 async function _process(filePath, fileOpts) {
+  if (filePath.match(/\/readme\.md$/i)) return
   await s.acquire()
   try {
     // Check if filePath exists, or continue
