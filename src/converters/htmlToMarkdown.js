@@ -110,7 +110,13 @@ HtmlToMarkdown.prototype.prepareContent = function() {
     this.content = this.subTexts.map(doc => doc.content).join("\n\n* * *\n\n")
   }
   else {
-    this.content = this.toMd.turndown( this.$(this.opts.contentElements.join(', ')).html() )
+    let html = this.$(this.opts.contentElement).html()
+    if (html) {
+      this.content = this.toMd.turndown( html )
+    }
+    else {
+      throw new Error(`failed to convert ${this.meta._convertedFrom}`)
+    }
   }
   return this
 }
