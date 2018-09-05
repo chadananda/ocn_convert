@@ -109,7 +109,7 @@ HtmlToMarkdown.prototype.prepareContent = function() {
     this.content = this.subTexts.map(doc => doc.content).join("\n\n* * *\n\n")
   }
   else {
-    let html = this.$(this.opts.contentElement).toArray().map(e => this.$(e).html()).join('')
+    let html = this.$(this.opts.contentElement).toArray().map(e => this.$.html(this.$(e))).join('')
     if (html) {
       this.content = this.toMd.turndown( html )
     }
