@@ -249,7 +249,7 @@ function _writeFilePath(filePath, meta = {}) {
   
   // Create good filenames for external urls
   if (fp.isUrl(filePath)) {
-    fileName = tr(filePath.replace(/^(https?)?\/*/, ''))
+    fileName = tr(filePath.replace(/^(https?)?\/*/, '')) + '.md'
   }
   // If we are extracting title data, save the file as Author, Title.md 
   else if (opts.e && (meta.author || false) && (meta.title || false)) {
