@@ -2,6 +2,7 @@
 /output/
 /src/converters/*/
 /src/spiders/*/
+/cache/
 
 # Logs
 logs
