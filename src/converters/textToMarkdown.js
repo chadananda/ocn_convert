@@ -122,7 +122,8 @@ TextToMarkdown.prototype.convert = function() {
     return
   }
 
-  this.content = this.raw
+  // Reset content
+  this.prepareContent()
 
   // Basic cleanup
   this.cleanupText().replaceAll(this.opts.prePatterns)

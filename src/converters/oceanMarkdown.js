@@ -12,6 +12,9 @@ const tr = require('transliteration').slugify
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const { crc32 } = require('crc')
+const pgExp = '([0-9MCLXVIOmclxvi]+)'
+const fnExp = '([AEFI]?[-0-9O\\*]+)'
+const starExp = '(.+)'
 
 const metaTemplate = {
   // id: (should not be set or changed by scripts)
@@ -84,6 +87,7 @@ class OceanMarkdown{
     this.optionTypes = {}
     this.defaultConversionOpts = {}
     this.addDefaultConversionOpts({
+      converter: 'text',
       encoding: 'UTF-8',
       reconvert: true,
       correctBahaiWords: true,
@@ -122,6 +126,10 @@ class OceanMarkdown{
       console.log (Object.assign({}, this, {raw: this.raw.length + ' chars',content: this.content.length + ' chars'}))
     }
   }
+}
+
+OceanMarkdown.prototype.init = async function() {
+  return this
 }
 
   /**
@@ -197,7 +205,7 @@ OceanMarkdown.prototype.mergeOptions = function(existing, merging) {
     else if (type === 'array' && typeof merging[k] === 'string') {
       existing[k].push(merging[k])
     }
-    else if (typeof merging[k] !== type || (Array.isArray(existing[k]) && !Array.isArray(merging[k]))) {
+    else if ((!Array.isArray(existing[k]) && typeof merging[k] !== type) || (Array.isArray(existing[k]) && !Array.isArray(merging[k]))) {
       throw new Error(`Wrong option type ${typeof merging[k]} for ${k} (expected ${type})`)
     }
     else {
@@ -283,7 +291,7 @@ OceanMarkdown.prototype.convert = function() {
   }
 
   // Reset content
-  this.content = this.raw
+  this.prepareContent()
 
   this.cleanupText().replaceAll(this.opts.prePatterns)
 
@@ -375,12 +383,12 @@ OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
   let p = ''
   let o = 'gm'
   if (r) {
-    p = r[1].replace('{pg}', '([0-9MCLXVIOmclxvi]+)').replace('{fn}', '([AEFI]?[-0-9O\\*]+)').replace('{*}', '(.+)')
+    p = r[1].replace('{pg}', pgExp).replace('{fn}', fnExp).replace('{*}', starExp)
     o = r[2] || o
   }
   else {
     p = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    p = p.replace('\\{pg\\}', '([0-9MCLXVIOmclxvi]+)').replace('\\{fn\\}', '([AEFI]?[-0-9O\\*]+)').replace('\\{\\*\\}', '(.+)')
+    p = p.replace('\\{pg\\}', pgExp).replace('\\{fn\\}', fnExp).replace('\\{\\*\\}', starExp)
   }
   p = pre + p + post
   return new RegExp(p, o)
@@ -507,6 +515,11 @@ OceanMarkdown.prototype.checkMeta = function() {
   }
   if (this.meta.id.length > 255) this.setMetaError('id')
 
+}
+
+OceanMarkdown.prototype.prepareContent = function() {
+  this.content = this.raw
+  return this
 }
 
 OceanMarkdown.prototype.prepareRaw = function(data = false) {

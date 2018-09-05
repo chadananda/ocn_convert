@@ -29,7 +29,9 @@ async function getConverter(contentType, stream, opts = {}) {
   else { // Work on original content
     text = await Converters[contentType].prototype.prepareStream(stream, opts)
     opts.encoding = text.encoding
-    return new Converters[contentType](text.content, opts)
+    let converter = new Converters[contentType](text.content, opts)
+    await converter.init()
+    return converter
   }
 }
 
