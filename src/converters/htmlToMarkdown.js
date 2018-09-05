@@ -83,8 +83,6 @@ class HtmlToMarkdown extends Converter {
     this.subLinks = []
     this.subTexts = []
     
-    this.prepareContent()
-
   }
 }
 
@@ -115,7 +113,7 @@ HtmlToMarkdown.prototype.prepareContent = function() {
       this.content = this.toMd.turndown( html )
     }
     else {
-      throw new Error(`failed to convert ${this.meta._convertedFrom}`)
+      throw new Error(`failed to convert ${this.meta.sourceUrl}`)
     }
   }
   return this
