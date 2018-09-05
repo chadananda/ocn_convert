@@ -6,6 +6,7 @@ const sh = require('shelljs')
 const getConverter = require('./index')
 const Sema = require('async-sema')
 const s = new Sema(4)
+const tr = require('transliteration').slugify
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -244,13 +245,21 @@ async function _process(filePath, fileOpts) {
  * the metadata for the file being converted
  */
 function _writeFilePath(filePath, meta = {}) {
-  // TODO: create good filenames for external urls
-  // If we are extracting title data, save the file as Author, Title.md
-  fileName = (
-    (opts.e && (meta.author || false) && (meta.title || false)) ? 
-    meta.author.trim() + ', ' + meta.title.trim() + '.md' : 
-    path.basename(filePath, path.extname(filePath)) + '.md'
-  )
+  let fileName
+  
+  // Create good filenames for external urls
+  if (fp.isUrl(filePath)) {
+    fileName = tr(filePath.replace(/^(https?)?\/*/, ''))
+  }
+  // If we are extracting title data, save the file as Author, Title.md 
+  else if (opts.e && (meta.author || false) && (meta.title || false)) {
+    fileName = meta.author.trim() + ', ' + meta.title.trim() + '.md'
+  }
+  // Otherwise, just use the original filename
+  else {
+    fileName = path.basename(filePath, path.extname(filePath)) + '.md'
+  }
+
   // If this is a reconversion
   if (opts.r && path.extname(filePath) === '.md') {
     return filePath
