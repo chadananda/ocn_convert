@@ -10,7 +10,9 @@ class HtmlToMarkdown extends Converter {
   constructor(input, opts = {}, meta = {}, raw = '') {
     super(input, opts)
     this.addDefaultConversionOpts({
-      contentElements: ['body'],
+      convertTables: true,
+      convertHeaderlessTables: true,
+      contentElement: 'body',
       metaElements: {
         title: 'title',
         author: '',
@@ -33,7 +35,25 @@ class HtmlToMarkdown extends Converter {
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove('script')
-      .addRule('absoluteLinks', {
+      if (this.opts.convertTables) {
+        this.toMd.use(tables)
+        if (this.opts.convertHeaderlessTables) {
+          this.toMd.addRule('table', {
+            filter: 'table',
+            replacement: function (content, node) {
+              // Ensure a title row, for compatibility
+              if (!/^[^\n]\n[- \|]/m.test(content)) {
+                let n = node.rows[0].childNodes.length
+                content = `${'|   '.repeat(n) + '|'}\n${'| - '.repeat(n) + '|'}${content}`
+              }
+              // Ensure there are no blank lines
+              content = content.replace('\n\n', '\n')
+              return '\n\n' + content + '\n\n'
+            }          
+          })
+        }
+      }
+      this.toMd.addRule('absoluteLinks', {
         filter: function (node, options) {
           return (
             node.nodeName === 'A' &&
