@@ -43,7 +43,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'E',
   ],
   alias: {
-    fixmeta: 'fixMeta',
+    fixMeta: 'fixmeta',
     verbose: 'v',
     bahai: 'b',
     noBahai: 'B',
@@ -201,7 +201,7 @@ async function _process(filePath, fileOpts) {
 
     // Load the file and perform the actual conversion
     let stream = await fp.load(filePath)
-    let doc = await getConverter(fileOpts.c, stream, fileOpts)
+    let doc = await getConverter(fileOpts.converter || fileOpts.c, stream, fileOpts)
 
     if (!fileOpts.M) {
       doc.convert()
