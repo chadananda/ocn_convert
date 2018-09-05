@@ -10,6 +10,7 @@ class HtmlToMarkdown extends Converter {
   constructor(input, opts = {}, meta = {}, raw = '') {
     super(input, opts)
     this.addDefaultConversionOpts({
+      getSubLinks: true,
       convertTables: true,
       convertHeaderlessTables: true,
       contentElement: 'body',
