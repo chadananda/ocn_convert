@@ -5,6 +5,7 @@ const cheerio = require('cheerio')
 const { URL } = require('url')
 const fp = require('../tools/filePath')
 const Sema = require('async-sema')
+const multilineFootnotesExp = '/^\\[\\^{fn}\\]: ((?:(?!\\n\\[|\\n\\* \\* \\*|\\n#)[\\s\\S])+)/gm'
 
 class HtmlToMarkdown extends Converter {
   constructor(input, opts = {}, meta = {}, raw = '') {
@@ -13,6 +14,7 @@ class HtmlToMarkdown extends Converter {
       getSubLinks: true,
       convertTables: true,
       convertHeaderlessTables: true,
+      multilineFootnotes: false,
       contentElement: 'body',
       metaElements: {
         title: 'title',
@@ -131,6 +133,22 @@ HtmlToMarkdown.prototype.prepareContent = function() {
     }
   }
   return this
+}
+
+HtmlToMarkdown.prototype._postConvert = function() {
+  if (this.opts.footnotesPerPage) {
+    this.footnotesPerPage()
+  }
+  if (this.opts.multilineFootnotes) {
+    this.multilineFootnotes()
+  }
+  return this
+}
+
+HtmlToMarkdown.prototype.multilineFootnotes = function() {
+  this.content = this.content.replace(this.toRegExp(multilineFootnotesExp), (m, m1, m2) => {
+    return `[^${m1}]: ${m2.replace(/\n{2,}\s*/g, '\n\n    ')}`
+  })
 }
 
 module.exports = HtmlToMarkdown
