@@ -36,50 +36,63 @@ class HtmlToMarkdown extends Converter {
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove('script')
-      if (this.opts.convertTables) {
-        this.toMd.use(tables)
-        if (this.opts.convertHeaderlessTables) {
-          this.toMd.addRule('table', {
-            filter: 'table',
-            replacement: function (content, node) {
-              // Ensure a title row, for compatibility
-              if (!/^[^\n]\n[- \|]/m.test(content)) {
-                let n = node.rows[0].childNodes.length
-                content = `${'|   '.repeat(n) + '|'}\n${'| - '.repeat(n) + '|'}${content}`
-              }
-              // Ensure there are no blank lines
-              content = content.replace('\n\n', '\n')
-              return '\n\n' + content + '\n\n'
-            }          
-          })
-        }
-      }
-      this.toMd.addRule('absoluteLinks', {
-        filter: function (node, options) {
-          return (
-            node.nodeName === 'A' &&
-            node.getAttribute('href')
-          )
-        },
-        replacement: function(content, node, options) {
-          let href = node.getAttribute('href')
-          if (!/^#/.test(href)) {
-            href = new URL(node.getAttribute('href'), this.url).toString()
+
+    // Convert tables if required
+    if (this.opts.convertTables) {
+      this.toMd.use(tables)
+        .addRule('cells', {
+          filter: ['th', 'td'],
+          replacement: function(content, node) {
+            var index = Array.prototype.indexOf.call(node.parentNode.childNodes, node)
+            var prefix = ' '
+            if (index === 0) prefix = '| '
+            return prefix + content + ' |' + '|'.repeat((node.getAttribute('colspan') || 1) -1)
           }
-          let title = node.title ? ' "' + node.title + '"' : ''
-          return '[' + content + '](' + href + title + ')'
-        }.bind(this)
-      })
-      .addRule('absoluteImages', {
-        filter: 'img',
-        replacement: function (content, node) {
-          var alt = node.alt || ''
-          var src = new URL(node.getAttribute('src'), this.url)
-          var title = node.title || ''
-          var titlePart = title ? ' "' + title + '"' : ''
-          return src ? '![' + alt + ']' + '(' + src + titlePart + ')' : ''
-        }.bind(this)
-      })
+        })
+      if (this.opts.convertHeaderlessTables) {
+        this.toMd.addRule('table', {
+          filter: 'table',
+          replacement: function (content, node) {
+            // Ensure a title row, for compatibility
+            if (!/^[^\n]+\n[-: \|]+$/m.test(content)) {
+              let n = node.rows[0].childNodes.length
+              content = `${'|   '.repeat(n) + '|'}\n${'| - '.repeat(n) + '|'}${content}`
+            }
+            // Ensure there are no blank lines
+            content = content.replace('\n\n', '\n')
+            return '\n\n' + content + '\n\n'
+          }          
+        })
+      }
+    }
+
+    // Use absolute references for links and images
+    this.toMd.addRule('absoluteLinks', {
+      filter: function (node, options) {
+        return (
+          node.nodeName === 'A' &&
+          node.getAttribute('href')
+        )
+      },
+      replacement: function(content, node, options) {
+        let href = node.getAttribute('href')
+        if (!/^#/.test(href)) {
+          href = new URL(node.getAttribute('href'), this.url).toString()
+        }
+        let title = node.title ? ' "' + node.title + '"' : ''
+        return '[' + content + '](' + href + title + ')'
+      }.bind(this)
+    })
+    .addRule('absoluteImages', {
+      filter: 'img',
+      replacement: function (content, node) {
+        var alt = node.alt || ''
+        var src = new URL(node.getAttribute('src'), this.url)
+        var title = node.title || ''
+        var titlePart = title ? ' "' + title + '"' : ''
+        return src ? '![' + alt + ']' + '(' + src + titlePart + ')' : ''
+      }.bind(this)
+    })
 
     this.subLinks = []
     this.subTexts = []
@@ -95,7 +108,7 @@ HtmlToMarkdown.prototype.init = async function() {
     await s.acquire()
     url = new URL(url, this.url).toString()
     let stream = await this.loadUrl(url)
-    let doc = await this.getConverter(this.opts.converter || this.opts.c || 'html', stream, Object.assign({}, this.opts, {sourceUrl: url}))
+    let doc = await this.getConverter(this.opts.converter || this.opts.c || 'html', stream, Object.assign({}, this.opts, {sourceUrl: url, footnotesPerPage: false}))
     await doc.init()
     doc.convert()
     this.subTexts.push(doc)
