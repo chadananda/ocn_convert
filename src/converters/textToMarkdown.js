@@ -116,14 +116,7 @@ class TextToMarkdown extends OceanMarkdown {
   }
 }
 
-TextToMarkdown.prototype.convert = function() {
-  if (this.opts.skip) {
-    this.content = ''
-    return
-  }
-
-  // Reset content
-  this.prepareContent()
+TextToMarkdown.prototype._convert = function() {
 
   // Basic cleanup
   this.cleanupText().replaceAll(this.opts.prePatterns)

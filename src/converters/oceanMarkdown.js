@@ -12,8 +12,9 @@ const tr = require('transliteration').slugify
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const { crc32 } = require('crc')
-const pgExp = '([0-9MCLXVIOmclxvi]+)'
+const pgExp = '([0-9MDCLXVIOmdclxvi]+)'
 const fnExp = '([AEFI]?[-0-9O\\*]+)'
+const footnotesPerPageExp = `/\\[pg ${pgExp}\\]((?:(?!\\[pg)[\\s\\S])*?)\\[\\^${fnExp}\\]/m`
 const starExp = '(.+)'
 
 const metaTemplate = {
@@ -92,12 +93,13 @@ class OceanMarkdown{
       reconvert: true,
       correctBahaiWords: true,
       correctSoftHyphens: true,
+      footnotesPerPage: false,
       prePatterns: {
         "/ah([aá])(['`’‘])I/": 'ah$1$2í'
       },
       postPatterns: {
         '/<[uU]>([CDGKSTZcdgkstz])([hH])<\/[uU]>/': '$1_$2', // can't strip the <u> tags until the end, because it messes up italics determination
-        '/\\n[\\n\\s]+/': '\n\n',
+        '/\\n[\\n ]+/': '\n\n',
       },
       cleanupPatterns: {
         // Line breaks
@@ -109,7 +111,8 @@ class OceanMarkdown{
         '/(\\d+)\xAD(\\d+)/': '$1-$2',
         '/[-\xAD]{2,}/': '--',
         '/ \xAD /': ' - ',
-      }
+      },
+      skip: false
     })
     this.mergeAllOptions(opts)
 
@@ -119,7 +122,6 @@ class OceanMarkdown{
 
     // CONTENT
     this.content = ''
-    this.prepareRaw()
 
     // VERBOSE LOGGING
     if (opts.v) {
@@ -282,17 +284,24 @@ OceanMarkdown.prototype.fixMeta = function(input) {
 }
 
 OceanMarkdown.prototype.convert = function() {
-
-  if (!this.raw) {
-    console.error(`Error: "${this.meta._convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
-    1. change the "_convertedFrom" metadata in "${this.filePath}", or
-    2. go to the folder where the document is and convert it again with this option:
-    -p "${path.dirname(this.filePath)}"`)
+  // Option to skip files
+  if (this.opts.skip) {
+    this.content = ''
+    return this
   }
 
   // Reset content
   this.prepareContent()
 
+  // Execute the conversion functions
+  this._preConvert()
+  this._convert()
+  this._postConvert()
+
+  return this
+}
+
+OceanMarkdown.prototype._convert = function() {
   this.cleanupText().replaceAll(this.opts.prePatterns)
 
   if (this.opts.correctSoftHyphens) {
@@ -309,10 +318,25 @@ OceanMarkdown.prototype.convert = function() {
 
   return this
 }
+OceanMarkdown.prototype._preConvert = function() {
+  return this
+}
+OceanMarkdown.prototype._postConvert = function() {
+  if (this.opts.footnotesPerPage) {
+    this.footnotesPerPage()
+  }
+  return this
+}
 
 OceanMarkdown.prototype.cleanupText = function() {
   this.replaceAll(this.opts.cleanupPatterns)
   return this
+}
+
+OceanMarkdown.prototype.footnotesPerPage = function() {
+  while (this.toRegExp(footnotesPerPageExp).test(this.content)) {
+    this.replaceAll(footnotesPerPageExp, '[pg $1]$2[^fn_$1_$3]')
+  }
 }
 
 OceanMarkdown.prototype.correctBahaiWords = function() {
@@ -518,15 +542,16 @@ OceanMarkdown.prototype.checkMeta = function() {
 }
 
 OceanMarkdown.prototype.prepareContent = function() {
+  if (!this.raw) {
+    console.error(`Error: "${this.meta._convertedFrom}" does not exist on your system, and you have requested to reconvert it. You can either:
+    1. change the "_convertedFrom" metadata in "${this.filePath}", or
+    2. go to the folder where the document is and convert it again with this option:
+    -p "${path.dirname(this.filePath)}"`)
+    return this
+  }
+
   this.content = this.raw
   return this
-}
-
-OceanMarkdown.prototype.prepareRaw = function(data = false) {
-  if (data) {
-    this.raw = data
-  }
-  this.content = this.raw
 }
 
 OceanMarkdown.prototype.getConverter = async function(contentType, stream, opts) {
