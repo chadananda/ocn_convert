@@ -6,6 +6,7 @@ const { URL } = require('url')
 const fp = require('../tools/filePath')
 const Sema = require('async-sema')
 const multilineFootnotesExp = '/^\\[\\^{fn}\\]: ((?:(?!\\n\\[|\\n\\* \\* \\*|\\n#)[\\s\\S])+)/gm'
+const subLinksProcessed = []
 
 class HtmlToMarkdown extends Converter {
   constructor(input, opts = {}, meta = {}, raw = '') {
@@ -109,11 +110,14 @@ HtmlToMarkdown.prototype.init = async function() {
   for (let url of this.subLinks) {
     await s.acquire()
     url = new URL(url, this.url).toString()
-    let stream = await this.loadUrl(url)
-    let doc = await this.getConverter(this.opts.converter || this.opts.c || 'html', stream, Object.assign({}, this.opts, {sourceUrl: url, footnotesPerPage: false}))
-    await doc.init()
-    doc.convert()
-    this.subTexts.push(doc)
+    if (subLinksProcessed.indexOf(url) === -1) {
+      let stream = await this.loadUrl(url)
+      let doc = await this.getConverter(this.opts.converter || this.opts.c || 'html', stream, Object.assign({}, this.opts, {sourceUrl: url, footnotesPerPage: false}))
+      await doc.init()
+      doc.prepareContent()
+      subLinksProcessed.push(url)
+      this.subTexts.push(doc)
+    }
     s.release()
   }
   return this
