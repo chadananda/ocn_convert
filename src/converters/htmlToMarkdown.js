@@ -14,6 +14,7 @@ class HtmlToMarkdown extends Converter {
     this.addDefaultConversionOpts({
       getSubLinks: true,
       convertTables: true,
+      collapseTableCells: true,
       convertHeaderlessTables: true,
       multilineFootnotes: false,
       contentElement: 'body',
@@ -38,7 +39,7 @@ class HtmlToMarkdown extends Converter {
   
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
-      .remove('script')
+      .remove(['script', 'iframe'])
 
     // Convert tables if required
     if (this.opts.convertTables) {
@@ -49,8 +50,9 @@ class HtmlToMarkdown extends Converter {
             var index = Array.prototype.indexOf.call(node.parentNode.childNodes, node)
             var prefix = ' '
             if (index === 0) prefix = '| '
+            if (this.opts.collapseTableCells) content = content.replace(/[\r\n]/g, ' ')
             return prefix + content + ' |' + '|'.repeat((node.getAttribute('colspan') || 1) -1)
-          }
+          }.bind(this)
         })
       if (this.opts.convertHeaderlessTables) {
         this.toMd.addRule('table', {
