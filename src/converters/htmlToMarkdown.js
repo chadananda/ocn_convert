@@ -58,6 +58,7 @@ class HtmlToMarkdown extends Converter {
         this.toMd.addRule('table', {
           filter: 'table',
           replacement: function (content, node) {
+            if (!/[^ \n\|]+/.test(content)) return ''
             // Ensure a title row, for compatibility
             if (!/^[^\n]+\n[-: \|]+$/m.test(content)) {
               let n = node.rows[0].childNodes.length
