@@ -35,4 +35,7 @@ async function getConverter(contentType, stream, opts = {}) {
   }
 }
 
-module.exports = getConverter
+module.exports = {
+  converters: Converters,
+  getConverter: getConverter,
+}

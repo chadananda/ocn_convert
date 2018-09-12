@@ -555,7 +555,7 @@ OceanMarkdown.prototype.prepareContent = function() {
 }
 
 OceanMarkdown.prototype.getConverter = async function(contentType, stream, opts) {
-  return require('../index')(contentType, stream, opts || {})
+  return require('../index').getConverter(contentType, stream, opts || {})
 }
 
 OceanMarkdown.prototype.setMetaError = function(key) {

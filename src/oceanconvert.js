@@ -3,10 +3,11 @@
 const fp = require('./tools/filePath')
 const path = require('path')
 const sh = require('shelljs')
-const getConverter = require('./index')
+const converters = require('./index')
 const Sema = require('async-sema')
 const s = new Sema(4)
 const tr = require('transliteration').slugify
+const { URL } = require('url')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -61,6 +62,12 @@ const args = require('minimist')(process.argv.slice(2), {
     converter: 'c',
   }
 })
+
+function camelize(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function(letter, index) {
+    return index == 0 ? letter.toLowerCase() : letter.toUpperCase();
+  }).replace(/[\W_]+/g, '');
+}
 
 if (args.D) {
   console.log(Object.assign({inputFiles: args._}, args, {_: null}))
@@ -138,7 +145,6 @@ const opts = Object.assign({
 }, args, {_: null})
 
 // Assign some variables here
-if (!opts.c) opts.c = 'text'
 if (opts.fixMeta || opts.M) { opts.M = true; opts.r = true; }
 if (opts.o) opts.o = path.resolve(__dirname + '/../output')
 if (opts.p) opts.p = path.resolve(process.cwd(), opts.p)
@@ -200,9 +206,20 @@ async function _process(filePath, fileOpts) {
       fileOpts._convertedFrom = filePath
     }
 
+    // For URLs, get the converter based on the site name
+    if (!fileOpts.converter && !fileOpts.c) {
+      let ext = path.extname(filePath).replace('.', '')
+      if (fp.isUrl(filePath) && (!ext || /^htm/.test(ext))) {
+        let htmlType = camelize(new URL(filePath).hostname.replace(/^www\./, '')) || 'html'
+        fileOpts.converter = (converters.converters.hasOwnProperty(htmlType) ? htmlType : 'html')
+      }
+      else if (converters.converters.hasOwnProperty(ext)) fileOpts.c = ext
+      else fileOpts.c = 'text'
+    }
+
     // Load the file and perform the actual conversion
     let stream = await fp.load(filePath)
-    let doc = await getConverter(fileOpts.converter || fileOpts.c, stream, fileOpts)
+    let doc = await converters.getConverter(fileOpts.converter || fileOpts.c, stream, fileOpts)
 
     if (!fileOpts.M) {
       doc.convert()
