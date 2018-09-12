@@ -12,10 +12,6 @@ const tr = require('transliteration').slugify
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const { crc32 } = require('crc')
-const pgExp = '([0-9MDCLXVIOmdclxvi]+)'
-const fnExp = '([AEFI]?[-0-9O\\*]+)'
-const footnotesPerPageExp = `/\\[pg ${pgExp}\\]((?:(?!\\[pg)[\\s\\S])*?)\\[\\^${fnExp}\\]/m`
-const starExp = '(.+)'
 
 const metaTemplate = {
   // id: (should not be set or changed by scripts)
@@ -88,6 +84,10 @@ class OceanMarkdown{
     this.optionTypes = {}
     this.defaultConversionOpts = {}
     this.addDefaultConversionOpts({
+      pgExp: '([0-9MDCLXVIOmdclxvi]+)',
+      fnExp: '([a-zA-Z]?[-0-9_Ol\\*]+)',
+      footnotesPerPageExp: `/\\[pg {pg}\\]((?:(?!\\[pg)[\\s\\S])*?)\\[\\^{fn}\\]/m`,
+      starExp: '(.+)',
       converter: 'text',
       encoding: 'UTF-8',
       reconvert: true,
@@ -334,8 +334,8 @@ OceanMarkdown.prototype.cleanupText = function() {
 }
 
 OceanMarkdown.prototype.footnotesPerPage = function() {
-  while (this.toRegExp(footnotesPerPageExp).test(this.content)) {
-    this.replaceAll(footnotesPerPageExp, '[pg $1]$2[^fn_$1_$3]')
+  while (this.toRegExp(this.opts.footnotesPerPageExp).test(this.content)) {
+    this.replaceAll(this.opts.footnotesPerPageExp, '[pg $1]$2[^fn_$1_$3]')
   }
 }
 
@@ -407,12 +407,12 @@ OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
   let p = ''
   let o = 'gm'
   if (r) {
-    p = r[1].replace('{pg}', pgExp).replace('{fn}', fnExp).replace('{*}', starExp)
+    p = r[1].replace('{pg}', this.opts.pgExp).replace('{fn}', this.opts.fnExp).replace('{*}', this.opts.starExp)
     o = r[2] || o
   }
   else {
     p = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    p = p.replace('\\{pg\\}', pgExp).replace('\\{fn\\}', fnExp).replace('\\{\\*\\}', starExp)
+    p = p.replace('\\{pg\\}', this.opts.pgExp).replace('\\{fn\\}', this.opts.fnExp).replace('\\{\\*\\}', this.opts.starExp)
   }
   p = pre + p + post
   return new RegExp(p, o)
