@@ -390,7 +390,7 @@ OceanMarkdown.prototype.replaceAll = function(search, replace = false, pre = '',
   }
   else if (typeof search === 'object' && !Array.isArray(search)) {
     Object.keys(search).forEach(k => {
-      if (search[k]) this.content = this.content.replace(this.toRegExp(k, pre, post), _normalizeRegexReplacements(search[k]))
+      if (search[k] || search[k] === '') this.content = this.content.replace(this.toRegExp(k, pre, post), _normalizeRegexReplacements(search[k]))
     })
   }
   return this
