@@ -209,7 +209,7 @@ async function _process(filePath, fileOpts) {
     // For URLs, get the converter based on the site name
     if (!fileOpts.converter && !fileOpts.c) {
       let ext = path.extname(filePath).replace('.', '')
-      if (fp.isUrl(filePath) && (!ext || /^htm/.test(ext))) {
+      if (fp.isUrl(filePath) && (!ext || /^x?htm/.test(ext))) {
         let htmlType = camelize(new URL(filePath).hostname.replace(/^www\./, '')) || 'html'
         fileOpts.converter = (converters.converters.hasOwnProperty(htmlType) ? htmlType : 'html')
       }
