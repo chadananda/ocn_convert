@@ -170,11 +170,15 @@ narrator:
 | **Page numbers**
 | `[pg 1]` | [pg 1] |
 | **Block attributes**
+| Block attributes follow the markdown-it-attrs rules.  |`{.class #id id="" or attr=""}` |
 | `This paragraph will`<br>`have a dropcap.{.dropcap}` | <p><b><i>T</i></b>his paragraph will have a dropcap.</p> |
 | `This paragraph will`<br>`be centered.{.center}` | <center>This paragraph will be centered.</center> |
 | `This paragraph will`<br>`be right aligned.{.right}` | <p>This paragraph will be right aligned.</p> |
 | <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry{.verse}</pre> | <pre>This is</pre><br><pre>   a verse</pre><br><pre>     of poetry.</pre> |
 | `This is`<br>`a list`<br>`with linebreaks.{.list}` | <p>This is some<br>a list<br>with linebreaks.</p> |
+| `This is`<br>`a numbered block with dropcap. {#1.5}` | <p><i>1.5</i> This is a numbered paragraph.</p> |
+| `This is`<br>`a numbered block as an atrribute with dropcap. {id="1.5" .dropcap}` | <p><i>1.5</i> <b>T</b>his is a numbered paragraph.</p> |
+
 
 Other classes:
 
