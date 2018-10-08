@@ -99,7 +99,7 @@ class OceanMarkdown{
       },
       postPatterns: {
         '/<[uU]>([CDGKSTZcdgkstz])([hH])<\/[uU]>/': '$1_$2', // can't strip the <u> tags until the end, because it messes up italics determination
-        '/\\n[\\n ]+/': '\n\n',
+        '/\\n(?:[\\n ]+)*\\n/': '\n\n', // condense all multiple linebreaks into just two
       },
       cleanupPatterns: {
         // Line breaks
