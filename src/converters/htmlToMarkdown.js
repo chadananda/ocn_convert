@@ -1,7 +1,7 @@
 const Converter = require('./oceanMarkdown')
 const TurndownService = require('turndown')
 const tables = require('turndown-plugin-gfm').tables
-const cheerio = require('cheerio')
+const cheerio = require('cheerio-advanced-selectors').wrap(require('cheerio'))
 const { URL } = require('url')
 const fp = require('../tools/filePath')
 const Sema = require('async-sema')
@@ -32,11 +32,6 @@ class HtmlToMarkdown extends Converter {
     }
     this.mergeAllOptions(opts)
     this.$ = cheerio.load(this.raw)
-
-    Object.keys(this.opts.metaElements).forEach(k => {
-      if (this.opts.metaElements[k]) this.meta[k] = this.$(this.opts.metaElements[k]).text()
-    })
-  
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove(['script', 'iframe'])
@@ -127,11 +122,19 @@ HtmlToMarkdown.prototype.init = async function() {
   return this
 }
 
+HtmlToMarkdown.prototype.prepareMeta = function() {
+  Object.keys(this.opts.metaElements).forEach(k => {
+    if (this.opts.metaElements[k]) this.meta[k] = this.$(this.opts.metaElements[k]).attr('content') || this.$(this.opts.metaElements[k]).text().trim() || ''
+  })
+  return this
+}
+
 HtmlToMarkdown.prototype.prepareContent = function() {
   if (this.subTexts.length) {
     this.content = this.subTexts.map(doc => doc.content).join("\n\n* * *\n\n")
   }
   else {
+    this.prepareMeta()
     let html = this.$(this.opts.contentElement).toArray().map(e => this.$.html(this.$(e))).join('')
     if (html) {
       this.content = this.toMd.turndown( html )
