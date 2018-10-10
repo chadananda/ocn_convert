@@ -6,6 +6,7 @@ const writeFile = promisify(fs.writeFile)
 const path = require('path')
 const sh = require('shelljs')
 const matter = require('gray-matter')
+const tr = require('transliteration').slugify
 
 module.exports = {
   isUrl: isUrl,
@@ -104,6 +105,10 @@ module.exports = {
       console.log(doc.toString())
     }
     return true
+  },
+
+  urlToFilename: function(url) {
+    return tr(url.toString().replace(/^(https?)?\/*/, '')) + '.md'
   },
 
 }

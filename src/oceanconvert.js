@@ -6,7 +6,6 @@ const sh = require('shelljs')
 const converters = require('./index')
 const Sema = require('async-sema')
 const s = new Sema(4)
-const tr = require('transliteration').slugify
 const { URL } = require('url')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
@@ -161,9 +160,33 @@ if (opts.o && !sh.test('-e', opts.o)) {
   sh.mkdir(opts.o)
 }
 
+if (opts.spider) {
+  for (filePath of opts.inputFiles) {
+    _spider(filePath, Object.assign({}, opts))
+  }
+}
+else {
+  for (filePath of opts.inputFiles) {
+    _process(filePath, Object.assign({}, opts))
+  }  
+}
 
-for (filePath of opts.inputFiles) {
-  _process(filePath, Object.assign({}, opts))
+async function _spider(filePath, fileOpts) {
+  await s.acquire()
+  try {
+    let spiderName = (typeof opts.spider === 'string' ? './spiders/custom/' + opts.spider : './spiders')
+    let Spider = require(spiderName)
+    let spider = new Spider(filePath, fileOpts)
+    spider.queue(filePath, spider._process)
+  }
+  catch (e) {
+    if (fileOpts.d) {
+      throw e
+    }
+    process.exitCode = 1
+    console.error(`Error spidering ${filePath}: ${e.message}`)
+  }
+  s.release()
 }
 
 async function _process(filePath, fileOpts) {
@@ -211,10 +234,10 @@ async function _process(filePath, fileOpts) {
       let ext = path.extname(filePath).replace('.', '')
       if (fp.isUrl(filePath) && (!ext || /^x?htm/.test(ext))) {
         let htmlType = camelize(new URL(filePath).hostname.replace(/^www\./, '')) || 'html'
-        fileOpts.converter = (converters.converters.hasOwnProperty(htmlType) ? htmlType : 'html')
+        fileOpts.converter = (converters.converters.hasOwnProperty(htmlType) ? htmlType : 'html') // should be saved in _conversionOpts
       }
-      else if (converters.converters.hasOwnProperty(ext)) fileOpts.c = ext
-      else fileOpts.c = 'text'
+      else if (converters.converters.hasOwnProperty(ext)) fileOpts.c = ext // should NOT be saved in _conversionOpts
+      else fileOpts.c = 'text' // should NOT be saved in _conversionOpts
     }
 
     // Load the file and perform the actual conversion
@@ -266,7 +289,7 @@ function _writeFilePath(filePath, meta = {}) {
   
   // Create good filenames for external urls
   if (fp.isUrl(filePath)) {
-    fileName = tr(filePath.replace(/^(https?)?\/*/, '')) + '.md'
+    fileName = fp.urlToFilename(filePath)
   }
   // If we are extracting title data, save the file as Author, Title.md 
   else if (opts.e && (meta.author || false) && (meta.title || false)) {

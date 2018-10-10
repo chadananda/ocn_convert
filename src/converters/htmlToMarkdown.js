@@ -162,4 +162,16 @@ HtmlToMarkdown.prototype.multilineFootnotes = function() {
   })
 }
 
+HtmlToMarkdown.prototype.getSublinks = function(selector, opts = {includeHash: false, allowParents: false}) {
+  return this.$(selector).get().map(v => v.attribs.href).filter(function(v,i,a) {
+    vUrl = new URL(v, this.url)
+    return (
+      typeof v === 'string' &&
+      (opts.includeHash || !/#/.test(v)) && // Remove links with a hash
+      a.indexOf(v) === i && // Ensure unique links
+      (opts.allowParents || vUrl.pathname.indexOf(this.url.pathname) === 0) // Ensure that sublinks are children of the current url
+    )
+  }.bind(this))
+}
+
 module.exports = HtmlToMarkdown
