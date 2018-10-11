@@ -244,10 +244,28 @@ async function _process(filePath, fileOpts) {
     let stream = await fp.load(filePath)
     let doc = await converters.getConverter(fileOpts.converter || fileOpts.c, stream, fileOpts)
 
-    if (!fileOpts.M) {
-      doc.convert()
+    if (fileOpts.M) {
+      let test = doc.toString()
+      try {
+        if (fileOpts.fixMeta) {
+          doc.fixMeta()
+        }
+        doc.checkMeta()
+      }
+      catch(e) {
+        console.error(`Fatal error on ${writeFilePath}:\n${e.stack}`)
+        s.release()
+        return
+      }
+      if (test !== doc.toString()) {
+        sh.cp(writeFilePath, `${writeFilePath}.bak`)
+        await fp.writeFile(writeFilePath, doc)
+      }
+      s.release()
+      return
     }
 
+    doc.convert()
     await fp.writeFile(writeFilePath, doc)
 
     // Save debugging info

@@ -298,6 +298,7 @@ OceanMarkdown.prototype.convert = function() {
   this._convert()
   this._postConvert()
 
+  this.checkMeta()
   return this
 }
 
@@ -369,7 +370,6 @@ OceanMarkdown.prototype.correctSoftHyphens = function() {
 }
 
 OceanMarkdown.prototype.toString = function() {
-  this.checkMeta()
   // Return the string of the document
   return matter.stringify(this.content, this.meta)
 }
@@ -537,7 +537,7 @@ OceanMarkdown.prototype.checkMeta = function() {
       )
     )) this.setMetaError(k)
   }
-  if (this.meta.id.length > 255) this.setMetaError('id')
+  if (this.meta.id && this.meta.id.length > 255) this.setMetaError('id')
 
 }
 
