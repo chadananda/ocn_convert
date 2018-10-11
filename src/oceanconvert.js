@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const ver=0.2
 const fp = require('./tools/filePath')
 const path = require('path')
 const sh = require('shelljs')
@@ -68,7 +69,13 @@ function camelize(str) {
   }).replace(/[\W_]+/g, '');
 }
 
+if (args.version) {
+  console.log(ver)
+  process.exit(0)
+}
+
 if (args.D) {
+  console.log(`OceanConvert version ${ver}`)
   console.log(Object.assign({inputFiles: args._}, args, {_: null}))
   process.exit(0)
 }
