@@ -24,7 +24,10 @@ async function getConverter(contentType, stream, opts = {}) {
   if (opts.M) { // JUST WORK ON EXISTING FILE
     let fileOpts = Object.assign({}, opts, {encoding: null})
     text = await Converters['text'].prototype.prepareStream(stream, fileOpts)
-    return new Converters[contentType](text.content, opts)
+    converter = new Converters[contentType](text.content, opts)
+    await converter.init()
+    converter.prepareContent()
+    return converter
   }
   else { // Work on original content
     text = await Converters[contentType].prototype.prepareStream(stream, opts)
