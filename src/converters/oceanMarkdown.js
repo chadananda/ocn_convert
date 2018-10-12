@@ -58,7 +58,12 @@ class OceanMarkdown{
   constructor(input, opts = {}) {
 
     // CORRECT IMPROPER FRONT MATTER
-    if (opts.fixMeta) input = this.fixMeta(input)
+    if (opts.M) {
+      this.rawStream = input
+      if (opts.fixMeta) {
+        input = this.fixMeta(input)
+      }
+    }
 
     // RAW DATA
     let fromInput = matter(input)
