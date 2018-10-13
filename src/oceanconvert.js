@@ -284,7 +284,7 @@ async function _process(filePath, fileOpts) {
       throw e
     }
     process.exitCode = 1
-    console.error(`Error converting ${filePath}: ${e.stack}`)
+    console.error(`Error converting ${filePath}:\n - ${(fileOpts.d ? e.stack : e.message)}`)
   }
   s.release()
 }
