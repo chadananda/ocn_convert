@@ -82,7 +82,7 @@ class OceanMarkdown{
       priority: 10,
       wordsCount: 0,
       _conversionOpts: {},
-    }, fromInput.data || {})
+    }, fromInput.data || {}, opts.meta || {})
     this.mergeMeta(opts)
 
     // CONVERSION OPTIONS

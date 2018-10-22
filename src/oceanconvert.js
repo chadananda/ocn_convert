@@ -217,7 +217,7 @@ async function _process(filePath, fileOpts) {
     // If we are reconverting an existing .md file, get the metadata from that file
     if (writeFilePath !== '-' && sh.test('-f', writeFilePath)) {
       let savedMeta = fp.getMeta(writeFilePath, fileOpts.fixMeta || false)
-      Object.assign(fileOpts, savedMeta || {}, savedMeta._conversionOpts || {})
+      Object.assign(fileOpts, savedMeta || {}, savedMeta._conversionOpts || {}, {meta: savedMeta})
     }
 
     // If we are fixing metadata, just use the writeFilePath
