@@ -255,13 +255,17 @@ async function _process(filePath, fileOpts) {
       doc.checkMeta()
       if (doc.rawStream !== doc.toString()) {
         sh.cp(writeFilePath, `${writeFilePath}.bak`)
-        await fp.writeFile(writeFilePath, doc)
       }
-      s.release()
-      return
+    }
+    else {
+      doc.convert()
     }
 
-    doc.convert()
+    if (doc.metaErrors.length) {
+      process.exitCode = 1
+      console.error(`${filePath} has bad/missing metadata (${doc.metaErrors.join(', ')})`)
+    }
+
     await fp.writeFile(writeFilePath, doc)
 
     // Save debugging info
@@ -273,11 +277,6 @@ async function _process(filePath, fileOpts) {
       })
     }
     
-    if (doc.metaErrors.length) {
-      process.exitCode = 1
-      console.error(`${filePath} has bad/missing metadata (${doc.metaErrors.join(', ')})`)
-    }
-
   }
   catch (e) {
     if (fileOpts.d) {
