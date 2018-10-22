@@ -12,7 +12,11 @@ class HtmlToMarkdown extends Converter {
     super(input, opts)
     this.addDefaultConversionOpts({
       multilineFootnotesExp: '/^\\[\\^(fn_)?{fn}\\]: ((?:(?!\\n\\[|\\n\\* \\* \\*|\\n#)[\\s\\S])+)/gm',
-      getSubLinks: true,
+      subLinkElement: 'a',
+      subLinkTextPattern: '',
+      subLinkUrlPattern: '/^[^#]+$/',
+      subLinksAllowParents: false,
+      getSubLinks: false,
       convertTables: true,
       collapseTableCells: true,
       convertHeaderlessTables: true,
@@ -97,6 +101,10 @@ class HtmlToMarkdown extends Converter {
 
     this.subLinks = []
     this.subTexts = []
+
+    if (this.opts.getSubLinks && this.subLinkElement) {
+      this.getSubLinks()
+    }
     
   }
 }
@@ -146,16 +154,31 @@ HtmlToMarkdown.prototype.prepareContent = function() {
   return this
 }
 
-HtmlToMarkdown.prototype.getSublinks = function(selector, opts = {includeHash: false, allowParents: false}) {
-  return this.$(selector).get().map(v => v.attribs.href).filter(function(v,i,a) {
-    vUrl = new URL(v, this.url)
-    return (
-      typeof v === 'string' &&
-      (opts.includeHash || !/#/.test(v)) && // Remove links with a hash
-      a.indexOf(v) === i && // Ensure unique links
-      (opts.allowParents || vUrl.pathname.indexOf(this.url.pathname) === 0) // Ensure that sublinks are children of the current url
-    )
-  }.bind(this))
+HtmlToMarkdown.prototype.getSubLinks = function(filter = null) {
+  if (!this.opts.getSubLinks || !this.opts.subLinkElement) return []
+  let links = this.$(this.opts.subLinkElement).get()
+    .filter(function(a) {
+      let href = a.attribs.href
+      return (
+        typeof href === 'string' &&
+        (!this.opts.subLinkUrlPattern || this.toRegExp(this.opts.subLinkUrlPattern).test(href)) &&
+        (!this.opts.subLinkTextPattern || this.toRegExp(this.opts.subLinkTextPattern).test(this.$(a).text()))
+      )
+    }.bind(this))
+
+  if (typeof filter === 'function') links = links.filter(filter)
+
+  this.subLinks = links.map(v => v.attribs.href)
+    .filter(function(v,i,a) {
+      let vUrl = new URL(v, this.url)
+      let myPath = this.url.pathname.replace(/\/[^\/]*\.[^\/]*$/, '')
+      return (
+        a.indexOf(v) === i && // Ensure unique links
+        (this.opts.subLinksAllowParents || vUrl.pathname.indexOf(myPath) === 0) // Ensure that sublinks are children of the current url
+      )
+    }.bind(this)) || []
+
+  return this
 }
 
 module.exports = HtmlToMarkdown
