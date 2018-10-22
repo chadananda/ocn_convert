@@ -146,22 +146,6 @@ HtmlToMarkdown.prototype.prepareContent = function() {
   return this
 }
 
-HtmlToMarkdown.prototype._postConvert = function() {
-  if (this.opts.footnotesPerPage) {
-    this.footnotesPerPage()
-  }
-  if (this.opts.multilineFootnotes) {
-    this.multilineFootnotes()
-  }
-  return this
-}
-
-HtmlToMarkdown.prototype.multilineFootnotes = function() {
-  this.content = this.content.replace(this.toRegExp(this.opts.multilineFootnotesExp), (m, m1, m2, m3) => {
-    return `[^${m1}${m2}]: ${m3.replace(/\n{2,}\s*/g, '\n\n    ')}`
-  })
-}
-
 HtmlToMarkdown.prototype.getSublinks = function(selector, opts = {includeHash: false, allowParents: false}) {
   return this.$(selector).get().map(v => v.attribs.href).filter(function(v,i,a) {
     vUrl = new URL(v, this.url)

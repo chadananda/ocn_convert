@@ -99,6 +99,8 @@ class OceanMarkdown{
       correctBahaiWords: true,
       correctSoftHyphens: true,
       footnotesPerPage: false,
+      footnotesToEndnotes: false,
+      condensePageBreaks: false,
       prePatterns: {
         "/ah([aá])(['`’‘])I/": 'ah$1$2í'
       },
@@ -327,10 +329,12 @@ OceanMarkdown.prototype._convert = function() {
 OceanMarkdown.prototype._preConvert = function() {
   return this
 }
+
 OceanMarkdown.prototype._postConvert = function() {
-  if (this.opts.footnotesPerPage) {
-    this.footnotesPerPage()
-  }
+  if (this.opts.footnotesPerPage) this.footnotesPerPage()
+  if (this.opts.multilineFootnotes || this.opts.multiLineFootnotes) this.multilineFootnotes()
+  if (this.opts.footnotesToEndnotes) this.footnotesToEndnotes()
+  if (this.opts.condensePageBreaks) this.condensePageBreaks()
   return this
 }
 
@@ -343,6 +347,29 @@ OceanMarkdown.prototype.footnotesPerPage = function() {
   while (this.toRegExp(this.opts.footnotesPerPageExp).test(this.content)) {
     this.replaceAll(this.opts.footnotesPerPageExp, '[pg $1]$2[^fn_$1_$3]')
   }
+  return this
+}
+
+OceanMarkdown.prototype.multilineFootnotes = function() {
+  this.content = this.content.replace(this.toRegExp(this.opts.multilineFootnotesExp), (m, m1, m2, m3) => {
+    return `[^${m1}${m2}]: ${m3.replace(/\n{2,}\s*/g, '\n\n    ')}`
+  })
+  return this
+}
+
+OceanMarkdown.prototype.footnotesToEndnotes = function() {
+  this.content.match(this.toRegExp('/^\\[\\^fn_{fn}\\]:[\\s\\S]+?\\n\\n(?=\\[|\\* \\* \\*)/')).forEach((match) => {
+    this.content = this.content.replace(match, '') + match
+  })
+  return this
+}
+
+OceanMarkdown.prototype.condensePageBreaks = function() {
+  this.content = this.content.replace(this.toRegExp('/([^\\n\\s])\\s*\\n[\\n\\s]*\\n\\[pg {pg}\\]\\n[\\n\\s]*\\n([^\\n\\s]+)/'), (t, m1, m2, m3) => {
+    if ('.?!:*='.indexOf(m1) > -1 || '#*-'.indexOf(m3[0]) > -1) return t // Previous line almost certainly terminates paragraph
+    return `${m1} [pg ${m2}] ${m3}` // Next line begins with a lowercase word or number
+  })
+  return this
 }
 
 OceanMarkdown.prototype.correctBahaiWords = function() {
