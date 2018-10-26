@@ -118,9 +118,6 @@ class TextToMarkdown extends OceanMarkdown {
 
 TextToMarkdown.prototype._convert = function() {
 
-  // Basic cleanup
-  this.cleanupText().replaceAll(this.opts.prePatterns)
-
   if (this.opts.correctSoftHyphens) {
     this.meta._softHyphenWords = ''
     this.correctSoftHyphens()
@@ -149,7 +146,6 @@ TextToMarkdown.prototype._convert = function() {
 
   // Run post-convert patterns
   this.replaceAll(this.opts.endPatterns)
-  this.replaceAll(this.opts.postPatterns)
 
   return this
 }

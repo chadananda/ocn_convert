@@ -101,6 +101,12 @@ class OceanMarkdown{
       footnotesPerPage: false,
       footnotesToEndnotes: false,
       condensePageBreaks: false,
+      chPattern: '',
+      chNumberPosition: '$1',
+      chReplacement: '$&',
+      vPattern: '',
+      vNumberPosition: '',
+      vReplacement: '',
       prePatterns: {
         "/ah([aá])(['`’‘])I/": 'ah$1$2í'
       },
@@ -300,17 +306,21 @@ OceanMarkdown.prototype.convert = function() {
   // Reset content
   this.prepareContent()
 
+  // Cleanup text
+  this.cleanupText().replaceAll(this.opts.prePatterns)
+
   // Execute the conversion functions
   this._preConvert()
   this._convert()
   this._postConvert()
+
+  this.replaceAll(this.opts.postPatterns)
 
   this.checkMeta()
   return this
 }
 
 OceanMarkdown.prototype._convert = function() {
-  this.cleanupText().replaceAll(this.opts.prePatterns)
 
   if (this.opts.correctSoftHyphens) {
     // Soft hyphen words are calculated every time
@@ -322,19 +332,20 @@ OceanMarkdown.prototype._convert = function() {
     this.correctBahaiWords()
   }
 
-  this.replaceAll(this.opts.postPatterns)
+  if (this.opts.footnotesPerPage) this.footnotesPerPage()
+  if (this.opts.multilineFootnotes || this.opts.multiLineFootnotes) this.multilineFootnotes()
+  if (this.opts.footnotesToEndnotes) this.footnotesToEndnotes()
+  if (this.opts.condensePageBreaks) this.condensePageBreaks()
+  if (this.opts.chPattern || (this.opts.vPattern && this.opts.vNumberPosition)) this.numberVerses()
 
   return this
 }
+
 OceanMarkdown.prototype._preConvert = function() {
   return this
 }
 
 OceanMarkdown.prototype._postConvert = function() {
-  if (this.opts.footnotesPerPage) this.footnotesPerPage()
-  if (this.opts.multilineFootnotes || this.opts.multiLineFootnotes) this.multilineFootnotes()
-  if (this.opts.footnotesToEndnotes) this.footnotesToEndnotes()
-  if (this.opts.condensePageBreaks) this.condensePageBreaks()
   return this
 }
 
@@ -359,7 +370,7 @@ OceanMarkdown.prototype.multilineFootnotes = function() {
 
 OceanMarkdown.prototype.footnotesToEndnotes = function() {
   (this.content.match(this.toRegExp('/^\\[\\^fn_{fn}\\]:[\\s\\S]+?\\n\\n(?=\\[|\\* \\* \\*)/')) || []).forEach((match) => {
-    this.content = this.content.replace(match, '') + match
+    this.content = this.content.replace(match, '') + '\n\n' + match
   })
   return this
 }
@@ -369,6 +380,42 @@ OceanMarkdown.prototype.condensePageBreaks = function() {
     if ('.?!:*='.indexOf(m1) > -1 || '#*-'.indexOf(m3[0]) > -1) return t // Previous line almost certainly terminates paragraph
     return `${m1} [pg ${m2}] ${m3}` // Next line begins with a lowercase word or number
   })
+  return this
+}
+
+function dotall(exp) {
+  return exp.replace(/([^\\]|(?:\\{2})+|^)(\.)/gm, '$1[\\s\\S]').replace(/{\*}/gm, '([\\s\\S]+)')
+}
+
+OceanMarkdown.prototype.numberVerses = function() {
+  // Just exit if there is nothing to replace
+  if (!this.opts.chPattern && !this.opts.vPattern) return this
+
+  let numberChapters = (this.opts.chPattern && /^\$\d$/.test(this.opts.chNumberPosition))
+
+  let vNum = parseInt(this.opts.vNumberPosition.replace('$', ''))
+  let vRepl = (this.opts.vReplacement ? this.opts.vReplacement : (this.opts.vPattern.match(/(?:[^\\]|(?:\\{2})+)\(/g) || []).reduce((t,v,i,a) => {
+    if (vNum === i+1) return t
+    return t + '$' + (i+1)
+  }, ''))
+  if (this.opts.vPattern && /^\$\d$/.test(this.opts.vNumberPosition)) {
+    let chNum = ''
+    let chExp = this.toRegExp(dotall(this.opts.chPattern), '^', '$', '')
+    let vExp = this.toRegExp(dotall(this.opts.vPattern), '^', '$', '')
+    this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
+      if (numberChapters && chExp.test(v)) {
+        chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
+        if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement)
+      }
+      else if (vExp.test(v)) {
+        return t + '\n\n' + v.replace(vExp, vRepl + (chNum.length ? ` {#${chNum}:${this.opts.vNumberPosition}}` : ` {#${this.opts.vNumberPosition}}` ))
+      }
+      return `${t}\n\n${v}`
+    })
+  }
+  else if (numberChapters && this.opts.chReplacement && (this.opts.chReplacement !== '$&')) {
+    this.replaceAll(this.opts.chPattern, this.opts.chReplacement, '^', '$')
+  }
   return this
 }
 
@@ -415,9 +462,10 @@ OceanMarkdown.prototype.toString = function() {
  */
 OceanMarkdown.prototype.replaceAll = function(search, replace = false, pre = '', post = '') {
   if (typeof replace === 'string') {
-    search = (typeof search === 'string' ? [search] : [...search])
+    search = (typeof search === 'string' || (typeof search === 'object' && search.constructor.name === 'RegExp') ? [search] : [...search])
     search.forEach(k => {
-      this.content = this.content.replace(this.toRegExp(k, pre, post), _normalizeRegexReplacements(replace))
+      let exp = (typeof k === 'string' ? this.toRegExp(k, pre, post) : k)
+      this.content = this.content.replace(exp, _normalizeRegexReplacements(replace))
     })
   }
   else if (typeof search === 'object' && !Array.isArray(search)) {
@@ -432,22 +480,21 @@ function _normalizeRegexReplacements(text) {
   return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t')
 }
 
-OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '') {
+OceanMarkdown.prototype.toRegExp = function(s, pre = '', post = '', flags = 'gm') {
   // Get regex string
   let r = s.match(/^\/([\s\S]+)\/([gim]*)$/m)
   // Get pattern and options
   let p = ''
-  let o = 'gm'
   if (r) {
     p = r[1].replace('{pg}', this.opts.pgExp).replace('{fn}', this.opts.fnExp).replace('{*}', this.opts.starExp)
-    o = r[2] || o
+    flags = r[2] || flags
   }
   else {
     p = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     p = p.replace('\\{pg\\}', this.opts.pgExp).replace('\\{fn\\}', this.opts.fnExp).replace('\\{\\*\\}', this.opts.starExp)
   }
   p = pre + p + post
-  return new RegExp(p, o)
+  return new RegExp(p, flags)
 }
 
 OceanMarkdown.prototype.checkMeta = function() {
