@@ -7,7 +7,7 @@ const { URL } = require('url')
 const path = require('path')
 const request = require('request')
 const cachedRequest = require('cached-request')(request)
-cachedRequest.setCacheDirectory('./cache')
+cachedRequest.setCacheDirectory(__dirname + '/../../cache')
 cachedRequest.setValue('ttl', (60*60*24*30))
 const sh = require('shelljs')
 const tr = require('transliteration').slugify

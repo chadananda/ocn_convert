@@ -53,7 +53,7 @@ module.exports = {
   loadUrl: async function(url, encoding = null) {
     const request = require('request')
     const cachedRequest = require('cached-request')(request)
-    cachedRequest.setCacheDirectory('./cache')
+    cachedRequest.setCacheDirectory(__dirname + '/../../cache')
     cachedRequest.setValue('ttl', (60*60*24*30))
 
     // Set the encoding for the request, unless it is specifically set to 0 || false
