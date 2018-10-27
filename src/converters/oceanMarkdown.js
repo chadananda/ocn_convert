@@ -394,7 +394,7 @@ OceanMarkdown.prototype.numberVerses = function() {
   let numberChapters = (this.opts.chPattern && /^\$\d$/.test(this.opts.chNumberPosition))
 
   let vNum = parseInt(this.opts.vNumberPosition.replace('$', ''))
-  let vRepl = (this.opts.vReplacement ? this.opts.vReplacement : (this.opts.vPattern.match(/(?:[^\\]|(?:\\{2})+)\(/g) || []).reduce((t,v,i,a) => {
+  let vRepl = (this.opts.vReplacement ? this.opts.vReplacement : (this.opts.vPattern.match(/(?:(?:[^\\]|(?:\\{2})+)\(|{(?:\*|pg|fn)})/g) || []).reduce((t,v,i,a) => {
     if (vNum === i+1) return t
     return t + '$' + (i+1)
   }, ''))
