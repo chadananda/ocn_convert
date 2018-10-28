@@ -4,9 +4,16 @@ const fs = require('fs')
 const { promisify } = require('util')
 const writeFile = promisify(fs.writeFile)
 const path = require('path')
+const { crc16 } = require('crc')
 const sh = require('shelljs')
 const matter = require('gray-matter')
 const tr = require('transliteration').slugify
+const request = require('request')
+const cachedRequest = require('cached-request')(request)
+cachedRequest.setCacheDirectory(__dirname + '/../../cache')
+cachedRequest.setValue('ttl', (60*60*24*30))
+const Sema = require('async-sema')
+const s = new Sema(2)
 
 module.exports = {
   isUrl: isUrl,
@@ -51,11 +58,6 @@ module.exports = {
   },
 
   loadUrl: async function(url, encoding = null) {
-    const request = require('request')
-    const cachedRequest = require('cached-request')(request)
-    cachedRequest.setCacheDirectory(__dirname + '/../../cache')
-    cachedRequest.setValue('ttl', (60*60*24*30))
-
     // Set the encoding for the request, unless it is specifically set to 0 || false
     if (encoding || (encoding === null)) {
       cachedRequest.setValue('encoding', encoding)
@@ -90,6 +92,36 @@ module.exports = {
   },
 
   /**
+   * 
+   * @param {URL} url 
+   */
+  downloadFileName: function(url) {
+    if (typeof URL === 'string') url = new URL(url)
+    let urlPath = url.hostname + path.dirname(url.pathname)
+    let fileName = path.basename(url.pathname)
+    return `${crc16(urlPath).toString(16)}.${fileName}`
+  },
+
+  downloadImages: async function(urls, filePath) {
+    if (!sh.test('-d', filePath + '/img')) sh.mkdir(filePath + '/img')
+    for (url of urls) {
+      let fileName = filePath + '/img/' + this.downloadFileName(url)
+      try {
+        if (!sh.test('-f', fileName)) {
+          console.log(`Downloading image: ${fileName}`)
+          await new Promise(resolve => 
+            request(url.toString())
+              .pipe(fs.createWriteStream(fileName))
+              .on('finish', resolve))
+        }
+      }
+      catch(e) {
+        console.error(`Error downloading image: ${fileName}\n${e.stack}`)
+      }
+    }
+  },
+
+  /**
    * Outputs a file to disk or stdout
    * @param {string} filePath
    * The full path of the file to write
@@ -98,6 +130,9 @@ module.exports = {
    */
   writeFile: async function(filePath, doc) {
     if (filePath && filePath !== '-') {
+      if (doc.opts.downloadImages && doc.images.length) {
+        await this.downloadImages(doc.images, path.dirname(filePath))
+      }
       await writeFile(filePath, doc)
       console.log(`Wrote "${filePath}"`)
     }

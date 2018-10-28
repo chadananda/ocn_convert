@@ -11,7 +11,6 @@ class HtmlToMarkdown extends Converter {
   constructor(input, opts = {}) {
     super(input, opts)
     this.addDefaultConversionOpts({
-      multilineFootnotesExp: '/^\\[\\^(fn_)?{fn}\\]: ((?:(?!\\n\\[|\\n\\* \\* \\*|\\n#)[\\s\\S])+)/gm',
       subLinkElement: 'a',
       subLinkTextPattern: '',
       subLinkUrlPattern: '/^[^#]+$/',
@@ -22,10 +21,12 @@ class HtmlToMarkdown extends Converter {
       convertHeaderlessTables: true,
       multilineFootnotes: false,
       contentElement: 'body',
+      downloadImages: false,
       metaElements: {
         title: 'title',
         author: '',
       },
+      imagesUrlPattern: '/\\.(?:png|jpe?g|gif)$/'
     })
     try {
       this.url = new URL(opts.sourceUrl || opts._convertedFrom)
@@ -39,6 +40,9 @@ class HtmlToMarkdown extends Converter {
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove(['script', 'iframe'])
+
+    let imagesUrlPattern = this.toRegExp(this.opts.imagesUrlPattern)
+    this.images = []
 
     // Convert tables if required
     if (this.opts.convertTables) {
@@ -93,19 +97,20 @@ class HtmlToMarkdown extends Converter {
       replacement: function (content, node) {
         var alt = node.alt || ''
         var src = new URL(node.getAttribute('src'), this.url)
+        if (this.opts.downloadImages && imagesUrlPattern.test(src.pathname)) {
+          this.images.push(src)
+          src = './img/' + fp.downloadFileName(src)
+        }
         var title = node.title || ''
         var titlePart = title ? ' "' + title + '"' : ''
-        return src ? '![' + alt + ']' + '(' + src + titlePart + ')' : ''
+        return src ? `![${alt}](${src}${titlePart})` : ''
       }.bind(this)
     })
 
     this.subLinks = []
     this.subTexts = []
 
-    if (this.opts.getSubLinks && this.subLinkElement) {
-      this.getSubLinks()
-    }
-    
+    if (this.opts.getSubLinks && this.subLinkElement) this.getSubLinks()
   }
 }
 
@@ -124,6 +129,7 @@ HtmlToMarkdown.prototype.init = async function() {
       doc.prepareContent()
       subLinksProcessed.push(url)
       this.subTexts.push(doc)
+      this.images = this.images.concat(doc.images)
     }
     s.release()
   }
