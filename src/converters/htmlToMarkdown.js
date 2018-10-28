@@ -26,7 +26,6 @@ class HtmlToMarkdown extends Converter {
         title: 'title',
         author: '',
       },
-      imagesUrlPattern: '/\\.(?:png|jpe?g|gif)$/'
     })
     try {
       this.url = new URL(opts.sourceUrl || opts._convertedFrom)
@@ -95,14 +94,15 @@ class HtmlToMarkdown extends Converter {
     .addRule('absoluteImages', {
       filter: 'img',
       replacement: function (content, node) {
-        var alt = node.alt || ''
-        var src = new URL(node.getAttribute('src'), this.url)
-        if (this.opts.downloadImages && imagesUrlPattern.test(src.pathname)) {
+        let alt = node.alt || ''
+        let href = node.getAttribute('src')
+        let src = new URL(href, this.url)
+        if (this.opts.downloadImages) {
           this.images.push(src)
           src = './img/' + fp.downloadFileName(src)
         }
-        var title = node.title || ''
-        var titlePart = title ? ' "' + title + '"' : ''
+        let title = node.title || ''
+        let titlePart = title ? ' "' + title + '"' : ''
         return src ? `![${alt}](${src}${titlePart})` : ''
       }.bind(this)
     })
