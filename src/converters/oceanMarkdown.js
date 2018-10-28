@@ -92,6 +92,7 @@ class OceanMarkdown{
       pgExp: '([0-9MDCLXVIOmdclxvi]+)',
       fnExp: '([a-zA-Z]?[-0-9_Ol\\*]+)',
       footnotesPerPageExp: `/\\[pg {pg}\\]((?:(?!\\[pg)[\\s\\S])*?)\\[\\^{fn}\\]/m`,
+      multilineFootnotesExp: '/^\\[\\^(fn_)?{fn}\\]: ((?:(?!\\n\\[|\\n\\* \\* \\*|\\n#)[\\s\\S])+)/gm',
       starExp: '(.+)',
       converter: 'text',
       encoding: 'UTF-8',
@@ -363,7 +364,7 @@ OceanMarkdown.prototype.footnotesPerPage = function() {
 
 OceanMarkdown.prototype.multilineFootnotes = function() {
   this.content = this.content.replace(this.toRegExp(this.opts.multilineFootnotesExp), (m, m1, m2, m3) => {
-    return `[^${m1}${m2}]: ${m3.replace(/\n{2,}\s*/g, '\n\n    ')}`
+    return `[^${m1 || ''}${m2 || ''}]: ${m3.replace(/\n/g, '\n    ')}`
   })
   return this
 }
