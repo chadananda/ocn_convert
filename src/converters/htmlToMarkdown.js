@@ -40,7 +40,6 @@ class HtmlToMarkdown extends Converter {
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove(['script', 'iframe'])
 
-    let imagesUrlPattern = this.toRegExp(this.opts.imagesUrlPattern)
     this.images = []
 
     // Convert tables if required
