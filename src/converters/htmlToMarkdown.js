@@ -5,6 +5,7 @@ const cheerio = require('cheerio-advanced-selectors').wrap(require('cheerio'))
 const { URL } = require('url')
 const fp = require('../tools/filePath')
 const Sema = require('async-sema')
+const subLinks = []
 const subLinksProcessed = []
 
 class HtmlToMarkdown extends Converter {
@@ -15,6 +16,7 @@ class HtmlToMarkdown extends Converter {
       subLinkTextPattern: '',
       subLinkUrlPattern: '/^[^#]+$/',
       subLinksAllowParents: false,
+      subLinkDepth: 1,
       getSubLinks: false,
       convertTables: true,
       collapseTableCells: true,
@@ -27,6 +29,7 @@ class HtmlToMarkdown extends Converter {
         author: '',
       },
     })
+    if (this.opts.singleLevel) this.opts.subLinkDepth = 1
     try {
       this.url = new URL(opts.sourceUrl || opts._convertedFrom)
       opts.sourceUrl = this.url.toString()
@@ -109,7 +112,7 @@ class HtmlToMarkdown extends Converter {
     this.subLinks = []
     this.subTexts = []
 
-    if (this.opts.getSubLinks && this.subLinkElement) this.getSubLinks()
+    this.getSubLinks()
   }
 }
 
@@ -123,12 +126,13 @@ HtmlToMarkdown.prototype.init = async function() {
     if (subLinksProcessed.indexOf(url) === -1) {
       if (this.debug) console.log(`loading ${url}`)
       let stream = await this.loadUrl(url)
-      let doc = await this.getConverter(this.opts.converter || this.opts.c || 'html', stream, Object.assign({}, this.opts, {sourceUrl: url, footnotesPerPage: false, debug: this.debug}))
+      let doc = await this.getConverter(this.opts.converter || this.opts.c || 'html', stream, Object.assign({}, this.opts, {sourceUrl: url, footnotesPerPage: false, debug: this.debug, subLinkDepth: this.opts.subLinkDepth - 1 }))
       await doc.init()
       doc.prepareContent()
       subLinksProcessed.push(url)
-      this.subTexts.push(doc)
+      this.subTexts.push(doc.content)
       this.images = this.images.concat(doc.images)
+      doc = null
     }
     s.release()
   }
@@ -144,7 +148,7 @@ HtmlToMarkdown.prototype.prepareMeta = function() {
 
 HtmlToMarkdown.prototype.prepareContent = function() {
   if (this.subTexts.length) {
-    this.content = this.subTexts.map(doc => doc.content).join("\n\n* * *\n\n")
+    this.content = this.subTexts.join("\n\n* * *\n\n")
   }
   else {
     this.prepareMeta()
@@ -153,14 +157,17 @@ HtmlToMarkdown.prototype.prepareContent = function() {
       this.content = this.toMd.turndown( html )
     }
     else {
-      throw new Error(`failed to convert ${this.meta.sourceUrl}`)
+      this.content = ''
+      console.warn(`No content in "${this.opts.contentElement}" at ${this.meta.sourceUrl}`)
     }
   }
   return this
 }
 
-HtmlToMarkdown.prototype.getSubLinks = function(filter = null) {
-  if (!this.opts.getSubLinks || !this.opts.subLinkElement) return []
+HtmlToMarkdown.prototype.getSubLinks = function() {
+
+  if (!this.opts.getSubLinks || !this.opts.subLinkDepth || !this.opts.subLinkElement) return this
+
   let links = this.$(this.opts.subLinkElement).get()
     .filter(function(a) {
       let href = a.attribs.href
@@ -171,19 +178,21 @@ HtmlToMarkdown.prototype.getSubLinks = function(filter = null) {
       )
     }.bind(this))
 
-  if (typeof filter === 'function') links = links.filter(filter)
+  if (typeof this.subLinkFilter === 'function') links = links.filter(this.subLinkFilter)
 
   this.subLinks = links.map(v => v.attribs.href)
     .filter(function(v,i,a) {
       let vUrl = new URL(v, this.url)
-      let myPath = this.url.pathname.replace(/\/[^\/]*\.[^\/]*$/, '')
+      let vUrlDirectory = this.url.pathname.replace(/\/[^\/]*\.[^\/]*$/, '/')
       return (
         a.indexOf(v) === i && // Ensure unique links
-        (this.opts.subLinksAllowParents || vUrl.pathname.indexOf(myPath) === 0) // Ensure that sublinks are children of the current url
+        (this.opts.subLinksAllowParents || vUrl.pathname.indexOf(vUrlDirectory) === 0) // Ensure that sublinks are children of the current url
       )
     }.bind(this)) || []
 
   return this
 }
+
+HtmlToMarkdown.prototype.subLinkFilter = true
 
 module.exports = HtmlToMarkdown
