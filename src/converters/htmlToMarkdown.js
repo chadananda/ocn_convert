@@ -147,11 +147,11 @@ HtmlToMarkdown.prototype.prepareMeta = function() {
 }
 
 HtmlToMarkdown.prototype.prepareContent = function() {
+  this.prepareMeta()
   if (this.subTexts.length) {
     this.content = this.subTexts.join("\n\n* * *\n\n")
   }
   else {
-    this.prepareMeta()
     let html = this.$(this.opts.contentElement).toArray().map(e => this.$.html(this.$(e))).join('')
     if (html) {
       this.content = this.toMd.turndown( html )
