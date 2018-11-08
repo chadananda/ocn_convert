@@ -33,6 +33,7 @@
     "shelljs": "^0.8.2",
     "transliteration": "^1.6.2",
     "turndown": "^4.0.2",
-    "turndown-plugin-gfm": "^1.0.2"
+    "turndown-plugin-gfm": "^1.0.2",
+    "words-to-numbers": "^1.5.1"
   }
 }

@@ -104,6 +104,7 @@ class OceanMarkdown{
       condensePageBreaks: false,
       chPattern: '',
       chNumberPosition: '$1',
+      chNumberFromText: false,
       chReplacement: '$&',
       vPattern: '',
       vNumberPosition: '',
@@ -406,6 +407,7 @@ OceanMarkdown.prototype.numberVerses = function() {
     this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
       if (numberChapters && chExp.test(v)) {
         chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
+        if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
         if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement)
       }
       else if (vExp.test(v)) {
