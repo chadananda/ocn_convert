@@ -3,6 +3,8 @@
 /src/converters/*/
 /src/spiders/*/
 /cache/
+/testing/
+/test/
 
 # Logs
 logs
