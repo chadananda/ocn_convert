@@ -130,7 +130,7 @@ module.exports = {
    */
   writeFile: async function(filePath, doc) {
     if (filePath && filePath !== '-') {
-      if (doc.opts.downloadImages && doc.images.length) {
+      if (typeof doc === 'object' && doc.opts.downloadImages && doc.images.length) {
         await this.downloadImages(doc.images, path.dirname(filePath))
       }
       await writeFile(filePath, doc)
