@@ -92,6 +92,7 @@ class OceanMarkdown{
       pgExp: '([0-9MDCLXVIOmdclxvi]+)',
       fnExp: '([a-zA-Z]?[-0-9_Ol\\*]+)',
       footnotesPerPageExp: `/\\[pg {pg}\\]((?:(?!\\[pg)[\\s\\S])*?)\\[\\^{fn}\\]/m`,
+      footnotesPerPageReplacement: '[pg $1]$2[^fn_$1_$3]',
       multilineFootnotesExp: '/^\\[\\^(fn_)?{fn}\\]: ((?:(?!\\n\\[|\\n\\* \\* \\*|\\n#)[\\s\\S])+)/gm',
       starExp: '(.+)',
       converter: 'text',
@@ -102,6 +103,8 @@ class OceanMarkdown{
       footnotesPerPage: false,
       footnotesToEndnotes: false,
       condensePageBreaks: false,
+      autoNumberPattern: '',
+      autoNumberStart: 1,
       chPattern: '',
       chNumberPosition: '$1',
       chNumberFromText: false,
@@ -334,6 +337,7 @@ OceanMarkdown.prototype._convert = function() {
     this.correctBahaiWords()
   }
 
+  if (this.opts.autoNumberPattern) this.autoNumber()
   if (this.opts.footnotesPerPage) this.footnotesPerPage()
   if (this.opts.multilineFootnotes || this.opts.multiLineFootnotes) this.multilineFootnotes()
   if (this.opts.footnotesToEndnotes) this.footnotesToEndnotes()
@@ -351,6 +355,18 @@ OceanMarkdown.prototype._postConvert = function() {
   return this
 }
 
+OceanMarkdown.prototype.autoNumber = function() {
+  let exp = this.toRegExp(this.opts.autoNumberPattern)
+  let num = this.opts.autoNumberStart - 1
+  this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
+    if (exp.test(v)) {
+      num++;
+      return `${t}\n\n${v} {#${num}}`
+    }
+    return `${t}\n\n${v}`
+  }, '')
+}
+
 OceanMarkdown.prototype.cleanupText = function() {
   this.replaceAll(this.opts.cleanupPatterns)
   return this
@@ -358,7 +374,7 @@ OceanMarkdown.prototype.cleanupText = function() {
 
 OceanMarkdown.prototype.footnotesPerPage = function() {
   while (this.toRegExp(this.opts.footnotesPerPageExp).test(this.content)) {
-    this.replaceAll(this.opts.footnotesPerPageExp, '[pg $1]$2[^fn_$1_$3]')
+    this.replaceAll(this.opts.footnotesPerPageExp, this.opts.footnotesPerPageReplacement)
   }
   return this
 }
@@ -414,7 +430,7 @@ OceanMarkdown.prototype.numberVerses = function() {
         return t + '\n\n' + v.replace(vExp, vRepl + (chNum.length ? ` {#${chNum}:${this.opts.vNumberPosition}}` : ` {#${this.opts.vNumberPosition}}` ))
       }
       return `${t}\n\n${v}`
-    })
+    }, '')
   }
   else if (numberChapters && this.opts.chReplacement && (this.opts.chReplacement !== '$&')) {
     this.replaceAll(this.opts.chPattern, this.opts.chReplacement, '^', '$')
