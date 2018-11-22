@@ -108,6 +108,7 @@ class OceanMarkdown{
       chPattern: '',
       chNumberPosition: '$1',
       chNumberFromText: false,
+      chNumberFromRoman: false,
       chReplacement: '$&',
       vPattern: '',
       vNumberPosition: '',
@@ -424,6 +425,7 @@ OceanMarkdown.prototype.numberVerses = function() {
       if (numberChapters && chExp.test(v)) {
         chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
+        else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum)
         if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement)
       }
       else if (vExp.test(v)) {
@@ -432,10 +434,44 @@ OceanMarkdown.prototype.numberVerses = function() {
       return `${t}\n\n${v}`
     }, '')
   }
-  else if (numberChapters && this.opts.chReplacement && (this.opts.chReplacement !== '$&')) {
-    this.replaceAll(this.opts.chPattern, this.opts.chReplacement, '^', '$')
+  else if (numberChapters && this.opts.chReplacement && (this.opts.chReplacement !== '$&' || this.opts.chNumberFromText || this.opts.chNumberFromRoman)) {
+    if (!this.opts.chNumberFromText && !this.opts.chNumberFromRoman) {
+      this.replaceAll(this.opts.chPattern, this.opts.chReplacement, '^', '$')
+    }
+    else {
+      let chExp = this.toRegExp(this.opts.chPattern, '^', '$')
+      this.content = this.content.replace(chExp, v => {
+        let chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
+        let text = v.replace(chExp, this.opts.chReplacement)
+        if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
+        else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum).toString()
+        return `${text} {#${chNum}}`
+      })
+    }
   }
   return this
+}
+
+const ROMANS = {
+  I: 1,
+  V: 5,
+  X: 10,
+  L: 50,
+  C: 100,
+  D: 500,
+  M: 1000,
+}
+
+OceanMarkdown.prototype.fromRoman = function(text) {
+  let sum = 0
+  let last = 0
+  text.split('').reverse().forEach(val => {
+    val = ROMANS[val && val.toUpperCase()] || 0
+    if (val < last) sum -= val
+    else sum += val
+    last = val
+  });
+  return sum || undefined
 }
 
 OceanMarkdown.prototype.correctBahaiWords = function() {
