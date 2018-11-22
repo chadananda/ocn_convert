@@ -15,7 +15,7 @@ class HtmlToMarkdown extends Converter {
       subLinkElement: 'a',
       subLinkTextPattern: '',
       subLinkUrlPattern: '/^[^#]+$/',
-      subLinksAllowParents: false,
+      subLinkAllowParents: false,
       subLinkDepth: 1,
       getSubLinks: false,
       convertTables: true,
@@ -112,13 +112,13 @@ class HtmlToMarkdown extends Converter {
     this.subLinks = []
     this.subTexts = []
 
-    this.getSubLinks()
   }
 }
 
 HtmlToMarkdown.prototype.loadUrl = fp.loadUrl
 
 HtmlToMarkdown.prototype.init = async function() {
+  this.getSubLinks()
   const s = new Sema(1)
   for (let url of this.subLinks) {
     await s.acquire()
@@ -178,7 +178,7 @@ HtmlToMarkdown.prototype.getSubLinks = function() {
       )
     }.bind(this))
 
-  if (typeof this.subLinkFilter === 'function') links = links.filter(this.subLinkFilter)
+  if (typeof this.subLinkFilter === 'function') links = links.filter(this.subLinkFilter.bind(this))
 
   this.subLinks = links.map(v => v.attribs.href)
     .filter(function(v,i,a) {
@@ -186,7 +186,7 @@ HtmlToMarkdown.prototype.getSubLinks = function() {
       let vUrlDirectory = this.url.pathname.replace(/\/[^\/]*\.[^\/]*$/, '/')
       return (
         a.indexOf(v) === i && // Ensure unique links
-        (this.opts.subLinksAllowParents || vUrl.pathname.indexOf(vUrlDirectory) === 0) // Ensure that sublinks are children of the current url
+        (this.opts.subLinkAllowParents || vUrl.pathname.indexOf(vUrlDirectory) === 0) // Ensure that sublinks are children of the current url
       )
     }.bind(this)) || []
 
