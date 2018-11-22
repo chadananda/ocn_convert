@@ -18,11 +18,12 @@ class OceanSpider extends Spider {
     Object.assign(this.opts, {
       // OPTIONS FOR LINKS TO FOLLOW
       selector: 'a', // Any cheerio selector for the links to follow
+      linkText: '', // RegExp text for links to follow
       followExtFilter: opts.extFilter || 'htm,html,xhtml,asp,php,none',
       followUrlFilter: opts.urlFilter || false,
       followAllowQuery: opts.allowQuery || true, // Whether to follow links with a querystring
       followAllowHash: opts.allowHash || false, // Whether to follow links with a hash
-      followAllowParent: opts.allowParent || false, // Whether to follow links to files on paths above the base URL
+      followAllowParents: opts.allowParents || false, // Whether to follow links to files on paths above the base URL
       followAllowExternal: opts.allowExternal || false, // Whether to follow external links - If you set this without also setting spiderUrlFilter or spiderMaxLinkDepth, you can spider the entire internet!
       followMinPathDepth: opts.minPathDepth || 0, // Minimum nesting depth of files to spider: e.g. nestingMinDepth: 1 will not retrieve files in the same folder as the original URL
       followMaxPathDepth: opts.maxPathDepth || 100, // Maximum nesting depth of files to spider: e.g. nestingMaxDepth: 0 will only retrieve files in the same folder as the original URL
@@ -31,7 +32,7 @@ class OceanSpider extends Spider {
       spiderUrlFilter: opts.urlFilter || false, // String or RegExp
       spiderAllowQuery: opts.allowQuery || true, // Whether to spider files with a querystring
       spiderAllowHash: opts.allowHash || false, // Whether to spider files with a hash
-      spiderAllowParent: opts.allowParent || false, // Whether to spider files on paths above the base URL
+      spiderAllowParents: opts.allowParents || false, // Whether to spider files on paths above the base URL
       spiderAllowExternal: opts.allowExternal || false, // Whether to spider external links - If you set this without also setting spiderUrlFilter or spiderMaxLinkDepth, you can spider the entire internet!
       spiderMinPathDepth: opts.minPathDepth || 0, // Minimum nesting depth of files to spider: e.g. nestingMinDepth: 1 will not retrieve files in the same folder as the original URL
       spiderMaxPathDepth: opts.maxPathDepth || 100, // Maximum nesting depth of files to spider: e.g. nestingMaxDepth: 0 will only retrieve files in the same folder as the original URL
@@ -40,15 +41,18 @@ class OceanSpider extends Spider {
       docUrlFilter: opts.urlFilter || '',
       docAllowQuery: opts.allowQuery || false,
       docAllowHash: opts.allowHash || false,
-      docAllowParent: opts.allowParent || false,
+      docAllowParents: opts.allowParents || false,
       docAllowExternal: opts.allowExternal || false,
       docMinPathDepth: opts.minPathDepth || 0, 
       docMaxPathDepth: opts.maxPathDepth || 100, 
       // LINK DEPTH OPTIONS
       minLinkDepth: 1, // The minimum link depth at which to begin saving documents
       maxLinkDepth: 0, // The maximum link depth to spider (0 = infinite)
+      // FILENAME OPTIONS
+      fileNameElement: 'title',
+      fileNamePattern: '',
       // BASE SPIDER OPTIONS
-      concurrent: 4, // How many requests can be run in parallel 
+      concurrent: 1, // How many requests can be run in parallel 
       delay: 100, // How long to wait after each request 
       logs: process.stderr, // A stream to where internal logs are sent, optional 
       allowDuplicates: false, // Re-visit visited URLs, false by default 
@@ -66,6 +70,7 @@ class OceanSpider extends Spider {
     }.bind(this)
     this.baseURL = new URL(url)
     this.linkDepth = {[url]: 0}
+    this.queue(url, this._process)
   }
 
   _process(doc) {
@@ -79,7 +84,14 @@ class OceanSpider extends Spider {
       (!this.opts.maxLinkDepth || linkDepth < this.opts.maxLinkDepth) && // stop spidering one level beneath maxLinkDepth
       (linkDepth === 0 || this._filterUrl(url, 'spider')) // check the spider filters for all URLs except the baseURL
     ) {
-      let links = doc.$(this.opts.selector || 'a').get().map(v => new URL(v.attribs.href, doc.url)).filter(this._filterUrl, this)
+      let links = doc.$(this.opts.selector || 'a')
+      if (this.opts.linkText) {
+        let linkText = new RegExp(this.opts.linkText)
+        links = links.filter((i,e) => {
+          return linkText.test(doc.$(e).text())
+        })
+      }
+      links = links.get().map(v => new URL(v.attribs.href, doc.url)).filter(this._filterUrl, this)
       for (let url of links) {
         let href = url.href
         this.linkDepth[href] = Math.min(linkDepth + 1, (this.linkDepth[href] || 1001))
@@ -96,7 +108,7 @@ class OceanSpider extends Spider {
       this.docFilter(doc) // Pass through the final filter
     ) {
       if (!sh.test('-d', path.dirname(fileName))) sh.mkdir('-p', path.dirname(fileName))
-      meta = { sourceUrl: href, _convertedFrom: href}
+      let meta = { sourceUrl: href, _convertedFrom: href, _converstionOpts: {reconvert: true} }
       if (this.opts.converter) meta._conversionOpts = {converter: this.opts.converter}
       writeFileSync(fileName, matter.stringify('', meta))
     }
@@ -121,7 +133,7 @@ class OceanSpider extends Spider {
     if (!this.opts[mode + 'AllowQuery'] && url.href.indexOf('?') !== -1) return false
     if (!this.opts[mode + 'AllowHash'] && url.href.indexOf('#') !== -1) return false
     if (!this.opts[mode + 'AllowExternal'] && url.hostname !== this.baseURL.hostname) return false
-    if (!this.opts[mode + 'AllowParent'] && urlDirname.indexOf(baseDirname) !== 0) return false
+    if (!this.opts[mode + 'AllowParents'] && urlDirname.indexOf(baseDirname) !== 0) return false
     if (this[mode + 'ExtFilter'].length && this[mode + 'ExtFilter'].indexOf(urlExtname) === -1) return false
     if (this[mode + 'UrlFilter'] && url.href.split(this[mode + 'UrlFilter']).length < 2) return false
     if (!(this.opts[mode + 'MinPathDepth'] <= pathDepth <= this.opts[mode + 'MaxPathDepth'])) return false
@@ -178,7 +190,11 @@ class OceanSpider extends Spider {
   }
 
   writeFileName(doc) {
-    return `${this.path}/${fp.urlToFilename(doc.url)}`
+    let name = ''
+    if (this.opts.fileNameElement) name = doc.$(this.opts.fileNameElement).text().replace(/[:\?\\\*"<>\|!]/g, '') || ''
+    if (this.opts.fileNamePattern) name = (name.match(new RegExp(this.opts.fileNamePattern)) || []).slice(1).join() || name
+    name = (name ? name + '.md' : fp.urlToFilename(doc.url))
+    return `${this.path}/${name}`
   }
 
   slugify(text) {

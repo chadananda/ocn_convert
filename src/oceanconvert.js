@@ -146,6 +146,11 @@ Output options:
   process.exit(0)
 }
 
+Object.keys(args).forEach(k => {
+  if (['true', 'True', 'TRUE', 'yes', 'Yes', 'YES'].indexOf(args[k]) > -1) args[k] = true
+  if (['false', 'False', 'FALSE', 'no', 'No', 'NO'].indexOf(args[k]) > -1) args[k] = false
+})
+
 const opts = Object.assign({
   inputFiles: args._.map(f => (fp.isUrl(f) ? f : path.resolve(process.cwd(), f))),
 }, args, {_: null})
@@ -168,32 +173,26 @@ if (opts.o && !sh.test('-e', opts.o)) {
 }
 
 if (opts.spider) {
+  let spiderName = (typeof opts.spider === 'string' ? './spiders/custom/' + opts.spider : './spiders')
+  let Spider = require(spiderName)
   for (filePath of opts.inputFiles) {
-    _spider(filePath, Object.assign({}, opts))
+    let fileOpts = Object.assign({}, opts)
+    try {
+      let spider = new Spider(filePath, fileOpts)
+    }
+    catch (e) {
+      if (fileOpts.d) {
+        throw e
+      }
+      process.exitCode = 1
+      console.error(`Error spidering ${filePath}: ${e.message}`)
+    }
   }
 }
 else {
   for (filePath of opts.inputFiles) {
     _process(filePath, Object.assign({}, opts))
   }  
-}
-
-async function _spider(filePath, fileOpts) {
-  await s.acquire()
-  try {
-    let spiderName = (typeof opts.spider === 'string' ? './spiders/custom/' + opts.spider : './spiders')
-    let Spider = require(spiderName)
-    let spider = new Spider(filePath, fileOpts)
-    spider.queue(filePath, spider._process)
-  }
-  catch (e) {
-    if (fileOpts.d) {
-      throw e
-    }
-    process.exitCode = 1
-    console.error(`Error spidering ${filePath}: ${e.message}`)
-  }
-  s.release()
 }
 
 async function _process(filePath, fileOpts) {
