@@ -425,7 +425,7 @@ OceanMarkdown.prototype.numberVerses = function() {
       if (numberChapters && chExp.test(v)) {
         chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
-        else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum)
+        else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum).toString()
         if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement)
       }
       else if (vExp.test(v)) {
