@@ -11,7 +11,7 @@ const tr = require('transliteration').slugify
 const request = require('request')
 const cachedRequest = require('cached-request')(request)
 cachedRequest.setCacheDirectory(__dirname + '/../../cache')
-cachedRequest.setValue('ttl', (60*60*24*30))
+cachedRequest.setValue('ttl', (60*60*24*30*1000))
 const Sema = require('async-sema')
 const s = new Sema(2)
 
