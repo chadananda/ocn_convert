@@ -113,6 +113,8 @@ class OceanMarkdown{
       vPattern: '',
       vNumberPosition: '',
       vReplacement: '',
+      vNumberFromText: false,
+      vNumberFromRoman: false,
       prePatterns: {
         "/ah([aá])(['`’‘])I/": 'ah$1$2í'
       },
@@ -403,7 +405,7 @@ OceanMarkdown.prototype.condensePageBreaks = function() {
 }
 
 function dotall(exp) {
-  return exp.replace(/([^\\]|(?:\\{2})+|^)(\.)/gm, '$1[\\s\\S]').replace(/{\*}/gm, '([\\s\\S]+)')
+  return exp.replace(/([^\\](?:\\{2})*|^)(\.)/gm, '$1[\\s\\S]').replace(/{\*}/gm, '([\\s\\S]+)')
 }
 
 OceanMarkdown.prototype.numberVerses = function() {
@@ -419,6 +421,7 @@ OceanMarkdown.prototype.numberVerses = function() {
   }, ''))
   if (this.opts.vPattern && /^\$\d$/.test(this.opts.vNumberPosition)) {
     let chNum = ''
+    let vNum = ''
     let chExp = this.toRegExp(dotall(this.opts.chPattern), '^', '$', '')
     let vExp = this.toRegExp(dotall(this.opts.vPattern), '^', '$', '')
     this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
@@ -429,7 +432,10 @@ OceanMarkdown.prototype.numberVerses = function() {
         if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement)
       }
       else if (vExp.test(v)) {
-        return t + '\n\n' + v.replace(vExp, vRepl + (chNum.length ? ` {#${chNum}:${this.opts.vNumberPosition}}` : ` {#${this.opts.vNumberPosition}}` ))
+        vNum = v.replace(vExp, this.opts.vNumberPosition)
+        if (this.opts.vNumberFromText) vNum = require('words-to-numbers').wordsToNumbers(vNum).toString()
+        else if (this.opts.vNumberFromRoman) vNum = this.fromRoman(vNum).toString()
+        return t + '\n\n' + v.replace(vExp, vRepl + (chNum.length ? ` {#${chNum}:${vNum}}` : ` {#${vNum}}` ))
       }
       return `${t}\n\n${v}`
     }, '')
