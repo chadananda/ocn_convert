@@ -429,7 +429,7 @@ OceanMarkdown.prototype.numberVerses = function() {
         chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
         else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum).toString()
-        if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement)
+        if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement.replace(this.opts.chNumberPosition, chNum))
       }
       else if (vExp.test(v)) {
         vNum = v.replace(vExp, this.opts.vNumberPosition)
