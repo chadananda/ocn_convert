@@ -32,7 +32,7 @@ module.exports = {
    */
   getMeta: function(filePath, fixMeta = false) {
     if (!isUrl(filePath) && sh.test('-f', filePath)) {
-      let text = sh.head({'-n': 99}, filePath).toString() + "\n---\n"
+      let text = sh.head({'-n': 199}, filePath).toString() + "\n---\n"
       if (fixMeta) {
         text = OceanMarkdown.prototype.fixMeta(text)
       }
