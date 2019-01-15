@@ -1,6 +1,6 @@
 {
   "name": "ocn_convert",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Converts various text documents to Ocean-compatible markdown",
   "main": "src/oceanconvert.js",
   "scripts": {
@@ -9,6 +9,9 @@
   },
   "author": "David Hunt",
   "license": "ISC",
+  "bin": {
+    "ocn_convert": "./src/oceanconvert.js"
+  },
   "dependencies": {
     "all-the-german-words": "^1.1.0",
     "an-array-of-english-words": "^1.3.1",
