@@ -3,6 +3,7 @@
 const ver=0.2
 const fp = require('./tools/filePath')
 const path = require('path')
+const mkdirp = require('mkdirp')
 const sh = require('shelljs')
 const converters = require('./index')
 const Sema = require('async-sema')
@@ -120,8 +121,8 @@ Conversion options:
 --chReplacement       replacement for chapter headers
 --fnRefPattern        pattern for footnote references, e.g. '[{fn}]'
 --fnRefReplacement    replacement for footnote references ('[^$1]')
---fnTextPattern       pattern for footnote text 
---fnTextReplacement   
+--fnTextPattern       pattern for footnote text
+--fnTextReplacement
 --headersCentered     parse centered lines as headers (false)
 --pgNumberFrom        number of the first page in the document
 --pgPattern           how page markers are defined in the file, e.g. '+P{pg}'
@@ -192,7 +193,7 @@ if (opts.spider) {
 else {
   for (filePath of opts.inputFiles) {
     _process(filePath, Object.assign({}, opts))
-  }  
+  }
 }
 
 async function _process(filePath, fileOpts) {
@@ -206,7 +207,7 @@ async function _process(filePath, fileOpts) {
     }
 
     // Add metadata if necessary
-    if (fileOpts.e) {
+    if (!fileOpts.e) { // Chad: I changed this to be if NOT
       Object.assign(fileOpts, fp.extractMetaFromName(filePath))
     }
 
@@ -224,12 +225,12 @@ async function _process(filePath, fileOpts) {
       filePath = writeFilePath
     }
 
-    // Otherwise, and if reconvert was called on the .md file itself, 
+    // Otherwise, and if reconvert was called on the .md file itself,
     // then use the _convertedFrom metadata to get the original data
     else if ((filePath === writeFilePath) && fileOpts._convertedFrom) {
       filePath = fileOpts._convertedFrom
     }
-    
+
     // If we are converting a new file, add _convertedFrom
     if (filePath !== writeFilePath && !fileOpts._convertedFrom) {
       fileOpts._convertedFrom = filePath
@@ -265,7 +266,9 @@ async function _process(filePath, fileOpts) {
       console.error(`${filePath} has bad/missing metadata (${doc.metaErrors.join(', ')})`)
     }
 
-    await fp.writeFile(writeFilePath, doc)
+    // force directory (like mkdir -p)
+    mkdirp.sync(path.dirname(writeFilePath))
+    await fp.writeFile(writeFilePath, doc, 'utf8')
 
     // Save debugging info
     if (fileOpts.d) {
@@ -275,7 +278,7 @@ async function _process(filePath, fileOpts) {
         }
       })
     }
-    
+
   }
   catch (e) {
     if (fileOpts.d) {
@@ -289,45 +292,37 @@ async function _process(filePath, fileOpts) {
 
 /**
  * Return that path to write data for a conversion
- * 
- * @param {string} filePath 
+ *
+ * @param {string} filePath
  * the file being converted
- * 
- * @param {object} meta 
+ *
+ * @param {object} meta
  * the metadata for the file being converted
  */
 function _writeFilePath(filePath, meta = {}) {
-  let fileName
-  
+  let extName = path.extname(filePath)
+  let pathName = path.dirname(filePath)
+  let fileName = path.basename(filePath, extName) + '.md'
+
+  // FILENAME
   // Create good filenames for external urls
-  if (fp.isUrl(filePath)) {
-    fileName = fp.urlToFilename(filePath)
-  }
-  // If we are extracting title data, save the file as Author, Title.md 
+  if (fp.isUrl(filePath)) fileName = fp.urlToFilename(filePath)
+  // If we are extracting title data, save the file as Author, Title.md
   else if (opts.e && (meta.author || false) && (meta.title || false)) {
-    fileName = meta.author.trim() + ', ' + meta.title.trim() + '.md'
-  }
-  // Otherwise, just use the original filename
-  else {
-    fileName = path.basename(filePath, path.extname(filePath)) + '.md'
+    fileName = `${meta.author.trim()}, ${meta.title.trim()}.md`
   }
 
+  // PATH
   // If this is a reconversion
-  if (opts.r && path.extname(filePath) === '.md') {
-    return filePath
-  }
+  if (opts.r && extName==='.md') return filePath
+
   // If we should save to --path
-  else if (opts.p) {
-    return opts.p + '/' + fileName
-  }
+  if (opts.p) pathName = opts.p
   // If we should save to the default output folder owing to --outputFiles
-  else if (opts.o) {
-    return opts.o + '/' + fileName
-  }
-  // If we should save to the same folder owing to --sameFolder
-  else if (opts.s) {
-    return filePath + '.md'
-  }
+  else if (opts.o) pathName = opts.o
+
+  // so long as there is an option set, return calculated write path
+  if (opts.p || opts.p || opts.s) return `${pathName}/${fileName}`
   // If no file argument is selected, write to stdout
-  return '-'
+  else return '-'
 }
