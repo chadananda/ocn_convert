@@ -102,6 +102,7 @@ class OceanMarkdown{
       correctSoftHyphens: true,
       footnotesPerPage: false,
       footnotesToEndnotes: false,
+      removeFootnotes: false,
       condensePageBreaks: false,
       autoNumberPattern: '',
       autoNumberStart: 1,
@@ -324,6 +325,8 @@ OceanMarkdown.prototype.convert = function() {
 
   this.replaceAll(this.opts.postPatterns)
 
+  this.replaceAll(/\n\n+/gm, '\n\n')
+
   this.checkMeta()
   return this
 }
@@ -344,9 +347,12 @@ OceanMarkdown.prototype._convert = function() {
   if (this.opts.footnotesPerPage) this.footnotesPerPage()
   if (this.opts.multilineFootnotes || this.opts.multiLineFootnotes) this.multilineFootnotes()
   if (this.opts.footnotesToEndnotes) this.footnotesToEndnotes()
+  if (this.opts.removeFootnotes) this.removeFootnotes()
   if (this.opts.condensePageBreaks) this.condensePageBreaks()
   if (this.opts.chPattern || (this.opts.vPattern && this.opts.vNumberPosition)) this.numberVerses()
-
+  this.content = this.content.replace(/(\* \* \*\n\n+)+/gm, '* * *\n\n')
+  this.content = this.content.replace(this.toRegExp('/( \\{[^\\}]*\\})*(\\n\\n\\* \\* \\*)*\\n\\n(\\[pg {pg}\\])\\n\\n/'), ' $3$1$2\n\n')
+  this.content = this.content.replace(/^(\s*\n|\s*\[pg [^\]]+\]\s*\n|\* \* \*\n)+/m, '')
   return this
 }
 
@@ -396,11 +402,20 @@ OceanMarkdown.prototype.footnotesToEndnotes = function() {
   return this
 }
 
+OceanMarkdown.prototype.removeFootnotes = function() {
+  this.content = this.content.replace(this.toRegExp('/^\\[\\^(?:fn_)?{fn}\\]:.+$(\\n[ \xA0]*\\n    .+)*\\n[ \xA0]*\\n/'), '')
+  this.content = this.content.replace(this.toRegExp('/\\s?\\[\\^(?:fn_)?{fn}\\]/'), '')
+}
+
 OceanMarkdown.prototype.condensePageBreaks = function() {
   this.content = this.content.replace(this.toRegExp('/([^\\n\\s])\\s*\\n[\\n\\s]*\\n\\[pg {pg}\\]\\n[\\n\\s]*\\n([^\\n\\s]+)/'), (t, m1, m2, m3) => {
-    if ('.?!:*='.indexOf(m1) > -1 || '#*-'.indexOf(m3[0]) > -1) return t // Previous line almost certainly terminates paragraph
-    return `${m1} [pg ${m2}] ${m3}` // Next line begins with a lowercase word or number
+    // This needs work I'm sure, but it will probably do for now.
+    // Numbers on next line in many texts indicate verse or paragraph numbers
+    // #*- on next line are markdown for headers and lists
+    if ('.?!:*='.indexOf(m1) > -1 || '#*-0123456789'.indexOf(m3[0]) > -1) return t // Previous line almost certainly terminates paragraph
+    return `${m1} [pg ${m2}] ${m3}` // Next line begins with a lowercase word
   })
+  this.content = this.content.replace(this.toRegExp('/(?:\\[pg {pg}\\][\\s\\n]+)+(\\[pg {pg}\\])/'), '$1')
   return this
 }
 
