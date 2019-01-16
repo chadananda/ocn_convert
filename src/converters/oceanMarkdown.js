@@ -102,6 +102,7 @@ class OceanMarkdown{
       correctSoftHyphens: true,
       footnotesPerPage: false,
       footnotesToEndnotes: false,
+      removeFootnotes: false,
       condensePageBreaks: false,
       autoNumberPattern: '',
       autoNumberStart: 1,
@@ -344,6 +345,7 @@ OceanMarkdown.prototype._convert = function() {
   if (this.opts.footnotesPerPage) this.footnotesPerPage()
   if (this.opts.multilineFootnotes || this.opts.multiLineFootnotes) this.multilineFootnotes()
   if (this.opts.footnotesToEndnotes) this.footnotesToEndnotes()
+  if (this.opts.removeFootnotes) this.removeFootnotes()
   if (this.opts.condensePageBreaks) this.condensePageBreaks()
   if (this.opts.chPattern || (this.opts.vPattern && this.opts.vNumberPosition)) this.numberVerses()
 
@@ -394,6 +396,11 @@ OceanMarkdown.prototype.footnotesToEndnotes = function() {
     this.content = this.content.replace(match, '') + '\n\n' + match
   })
   return this
+}
+
+OceanMarkdown.prototype.removeFootnotes = function() {
+  this.content = this.content.replace(this.toRegExp('/^\\[\\^(?:fn_)?{fn}\\]:.+$(\\n[ \xA0]*\\n    .+)*\\n[ \xA0]*\\n/'), '')
+  this.content = this.content.replace(this.toRegExp('/\\s?\\[\\^(?:fn_)?{fn}\\]/'), '')
 }
 
 OceanMarkdown.prototype.condensePageBreaks = function() {
