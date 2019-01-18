@@ -1,6 +1,6 @@
 {
   "name": "ocn_convert",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Converts various text documents to Ocean-compatible markdown",
   "main": "src/oceanconvert.js",
   "scripts": {
@@ -37,6 +37,7 @@
     "transliteration": "^1.6.2",
     "turndown": "^4.0.2",
     "turndown-plugin-gfm": "^1.0.2",
+    "utf8": "^3.0.0",
     "words-to-numbers": "^1.5.1"
   }
 }

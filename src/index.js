@@ -10,17 +10,18 @@ for (let f of sh.find(path.join(__dirname, 'converters'))) {
 }
 
 /**
- * 
+ *
  * @param {string} contentType The content type which will be converted to markdown; also functions as the name of the converter.
- * Examples: 
+ * Examples:
  * text: The TextToMarkdown converter, for converting plain text to Ocean Markdown
- * html: The HtmlToMarkdown converter, for converting html to Ocean Markdown 
+ * html: The HtmlToMarkdown converter, for converting html to Ocean Markdown
  * custom: A custom converter that extends OceanMarkdown and resides in src/converters/.../customToMarkdown.js
  * @param {stream} stream A stream of data, such as might be obtained from fs.createReadStream() or request().
  * @param {object} opts A set of options and metadata for the conversion object.
  */
 async function getConverter(contentType, stream, opts = {}) {
   let text
+  // console.log(contentType)
   if (opts.M) { // JUST WORK ON EXISTING FILE
     let fileOpts = Object.assign({}, opts, {encoding: null})
     text = await Converters['text'].prototype.prepareStream(stream, fileOpts)

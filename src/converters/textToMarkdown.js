@@ -1,14 +1,15 @@
 const OceanMarkdown = require('./oceanMarkdown.js')
+const utf8 = require('utf8')
 
 class TextToMarkdown extends OceanMarkdown {
 
   /**
    * Convert Text to Markdown
-   * 
+   *
    * @param {string} text
    * the text to be replaced
-   * 
-   * @param {*} opts 
+   *
+   * @param {*} opts
    * the options to use when converting text, including:
    * --pageMarker (string): the pattern of page markers in the document
    */
@@ -32,7 +33,7 @@ class TextToMarkdown extends OceanMarkdown {
       chPatterns: {},
       chPattern: '',
       chReplacement: '## $1',
-    
+
       // Footnotes
       fnRefPatterns: {
         '/\\[{fn}\\](\\s)/': '[^$1]$2',
@@ -48,10 +49,10 @@ class TextToMarkdown extends OceanMarkdown {
       },
       fnTextPattern: '',
       fnTextReplacement: '[^$1]: $2',
-    
+
       // Headers
       headersCentered: false,
-    
+
       // Page Numbers
       pgPatterns: {
         '|PPage_{pg}': '[pg $1]',
@@ -67,7 +68,7 @@ class TextToMarkdown extends OceanMarkdown {
       pgNumberFrom: 0,
       // TODO: some documents have page markers inside paragraphs
       pgInText: false,
-    
+
       // Paragraphs
       pIndent: [
       ],
@@ -78,7 +79,7 @@ class TextToMarkdown extends OceanMarkdown {
       ],
       // TODO: some documents have paragraph numbers
       pNumbers: false,
-    
+
       // Blockquotes
       qIndent: [
         '/(>?) ?(?: {1,4}|\\t)/', // One to four spaces, or a tab character
@@ -87,7 +88,7 @@ class TextToMarkdown extends OceanMarkdown {
       ],
       qIndentFirst: [
       ],
-    
+
       toLineBreaks: [
         '/^\\[?\\.\\]?\\s*\\[?\\.\\/\\/\\/?\\]?[ \\t]*/', // Some files have lines like [.] [.//]
         '/^\\[?\\.\\/\\/\\/?\\]?\\s*\\[?\\.\\]?[ \\t]*/', // Some files have lines like [.///] [.]
@@ -103,12 +104,12 @@ class TextToMarkdown extends OceanMarkdown {
         '/^(>* )([^_\\n]+_)$/': '$1_$2', // Sometimes italics are not opened at the beginning of a blockquote line
         '/^>* _[^_\\n]+_[^_\\n]+_[^_\\n]+$/': '$&_', // Again, sometimes italics are not closed at the end of a blockquote line
       },
-    
+
       postPatterns: {
         '/\\[pg (\\d*)O([\\dO]*)]/': '[pg $10$2]', // Sometimes page numbers have capital O instaed of 0
         '/\\[pg (\\d*)O(\\d*)]/': '[pg $10$2]', // Sometimes page numbers have capital O instaed of 0...twice?
       }
-    
+
     })
 
     this.mergeAllOptions(opts)

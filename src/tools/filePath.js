@@ -26,7 +26,7 @@ module.exports = {
 
   /**
    * Retrieves metadata from the yaml front matter of an .md doc
-   * 
+   *
    * @param {string} filePath
    * the file path from which to retrieve the metadata
    */
@@ -78,22 +78,25 @@ module.exports = {
     }
     else {
       filePath = path.resolve(process.cwd(), pathOrUrl)
-  
+
       // Check if filePath exists
       if (!sh.test('-f', pathOrUrl)) {
         return false
       }
-    
-      // Load the file into a stream
-      stream = fs.createReadStream(pathOrUrl)
 
+      // Load the file into a stream
+      // var readOptions = {
+      //   'flags': 'r', 'encoding': 'utf-8', 'mode': 0666
+      //   // , 'bufferSize': 4 * 1024
+      // }
+      stream = fs.createReadStream(pathOrUrl, "utf8")
     }
     return stream
   },
 
   /**
-   * 
-   * @param {URL} url 
+   *
+   * @param {URL} url
    */
   downloadFileName: function(url) {
     if (typeof URL === 'string') url = new URL(url)
@@ -109,7 +112,7 @@ module.exports = {
       try {
         if (!sh.test('-f', fileName)) {
           console.log(`Downloading image: ${fileName}`)
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             request(url.toString())
               .pipe(fs.createWriteStream(fileName))
               .on('finish', resolve))
@@ -126,7 +129,7 @@ module.exports = {
    * @param {string} filePath
    * The full path of the file to write
    * @param {TextToMarkdown} doc
-   * The converted object to write to the file 
+   * The converted object to write to the file
    */
   writeFile: async function(filePath, doc) {
     if (filePath && filePath !== '-') {
