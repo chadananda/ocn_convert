@@ -106,11 +106,18 @@ class OceanMarkdown{
       condensePageBreaks: false,
       autoNumberPattern: '',
       autoNumberStart: 1,
+      bkPattern: '',
+      bkNumberPosition: '$1',
+      bkNumberFromText: false,
+      bkNumberFromRoman: false,
+      bkReplacement: '$&',
+      bkSeparator: ':',
       chPattern: '',
       chNumberPosition: '$1',
       chNumberFromText: false,
       chNumberFromRoman: false,
       chReplacement: '$&',
+      chSeparator: '.',
       vPattern: '',
       vNumberPosition: '',
       vReplacement: '',
@@ -427,6 +434,7 @@ OceanMarkdown.prototype.numberVerses = function() {
   // Just exit if there is nothing to replace
   if (!this.opts.chPattern && !this.opts.vPattern) return this
 
+  let numberBooks = (this.opts.bkPattern && /^\$\d$/.test(this.opts.chNumberPosition))
   let numberChapters = (this.opts.chPattern && /^\$\d$/.test(this.opts.chNumberPosition))
 
   let vNum = parseInt(this.opts.vNumberPosition.replace('$', ''))
@@ -435,11 +443,19 @@ OceanMarkdown.prototype.numberVerses = function() {
     return t + '$' + (i+1)
   }, ''))
   if (this.opts.vPattern && /^\$\d$/.test(this.opts.vNumberPosition)) {
+    let bkNum = ''
     let chNum = ''
     let vNum = ''
+    let bkExp = this.toRegExp(dotall(this.opts.bkPattern), '^', '$', '')
     let chExp = this.toRegExp(dotall(this.opts.chPattern), '^', '$', '')
     let vExp = this.toRegExp(dotall(this.opts.vPattern), '^', '$', '')
     this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
+      if (numberBooks && bkExp.test(v)) {
+        bkNum = v.replace(bkExp, this.opts.bkNumberPosition).replace(/\$/g, '\\$')
+        if (this.opts.bkNumberFromText) bkNum = require('words-to-numbers').wordsToNumbers(bkNum).toString()
+        else if (this.opts.bkNumberFromRoman) bkNum = this.fromRoman(bkNum).toString()
+        if (this.opts.bkReplacement && this.opts.bkReplacement !== '$&') return t + '\n\n' + v.replace(bkExp, this.opts.bkReplacement.replace(this.opts.bkNumberPosition, bkNum))
+      }
       if (numberChapters && chExp.test(v)) {
         chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
@@ -450,7 +466,7 @@ OceanMarkdown.prototype.numberVerses = function() {
         vNum = v.replace(vExp, this.opts.vNumberPosition)
         if (this.opts.vNumberFromText) vNum = require('words-to-numbers').wordsToNumbers(vNum).toString()
         else if (this.opts.vNumberFromRoman) vNum = this.fromRoman(vNum).toString()
-        return t + '\n\n' + v.replace(vExp, vRepl + (chNum.length ? ` {#${chNum}:${vNum}}` : ` {#${vNum}}` ))
+        return t + '\n\n' + v.replace(vExp, vRepl + ` {#${bkNum}${(bkNum.length && this.opts.bkSeparator || '')}${chNum}${(chNum.length && this.opts.chSeparator || '')}${vNum}}`)
       }
       return `${t}\n\n${v}`
     }, '')
