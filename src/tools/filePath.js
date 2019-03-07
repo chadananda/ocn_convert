@@ -89,7 +89,7 @@ module.exports = {
       //   'flags': 'r', 'encoding': 'utf-8', 'mode': 0666
       //   // , 'bufferSize': 4 * 1024
       // }
-      stream = fs.createReadStream(pathOrUrl, "utf8")
+      stream = fs.createReadStream(pathOrUrl)
     }
     return stream
   },

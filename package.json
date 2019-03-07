@@ -1,6 +1,6 @@
 {
   "name": "ocn_convert",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Converts various text documents to Ocean-compatible markdown",
   "main": "src/oceanconvert.js",
   "scripts": {
