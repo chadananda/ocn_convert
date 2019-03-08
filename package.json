@@ -18,7 +18,7 @@
     "an-array-of-french-words": "^1.0.0",
     "an-array-of-spanish-words": "^1.0.1",
     "async-sema": "^2.1.2",
-    "bahai-autocorrect": "dnotes/bahai-autocorrect",
+    "bahai-autocorrect": "^2.0",
     "cached-request": "^1.1.4",
     "chardet": "^0.5.0",
     "cheerio": "^1.0.0-rc.2",
