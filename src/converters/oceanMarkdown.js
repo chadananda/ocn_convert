@@ -403,7 +403,7 @@ OceanMarkdown.prototype.multilineFootnotes = function() {
 }
 
 OceanMarkdown.prototype.footnotesToEndnotes = function() {
-  (this.content.match(this.toRegExp('/^\\[\\^fn_{fn}\\]:[\\s\\S]+?\\n\\n(?=\\[|\\* \\* \\*)/')) || []).forEach((match) => {
+  (this.content.match(this.toRegExp('/^\\[\\^fn_{fn}\\]:[\\s\\S]+?\\n(?=\\[(?:pg|\\^fn)|\\* \\* \\*)/')) || []).forEach((match) => {
     this.content = this.content.replace(match, '') + '\n\n' + match
   })
   return this
