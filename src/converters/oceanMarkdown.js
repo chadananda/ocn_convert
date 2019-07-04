@@ -377,7 +377,7 @@ OceanMarkdown.prototype.autoNumber = function() {
   this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
     if (exp.test(v)) {
       num++;
-      return `${t}\n\n${v} {#${num}}`
+      return `${t}\n\n${v} {¶=${num}}`
     }
     return `${t}\n\n${v}`
   }, '')
@@ -466,7 +466,7 @@ OceanMarkdown.prototype.numberVerses = function() {
         vNum = v.replace(vExp, this.opts.vNumberPosition)
         if (this.opts.vNumberFromText) vNum = require('words-to-numbers').wordsToNumbers(vNum).toString()
         else if (this.opts.vNumberFromRoman) vNum = this.fromRoman(vNum).toString()
-        return t + '\n\n' + v.replace(vExp, vRepl + ` {#${bkNum}${(bkNum.length && this.opts.bkSeparator || '')}${chNum}${(chNum.length && this.opts.chSeparator || '')}${vNum}}`)
+        return t + '\n\n' + v.replace(vExp, vRepl + ` {¶=${bkNum}${(bkNum.length && this.opts.bkSeparator || '')}${chNum}${(chNum.length && this.opts.chSeparator || '')}${vNum}}`)
       }
       return `${t}\n\n${v}`
     }, '')
@@ -482,7 +482,7 @@ OceanMarkdown.prototype.numberVerses = function() {
         let text = v.replace(chExp, this.opts.chReplacement)
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
         else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum).toString()
-        return `${text} {#${chNum}}`
+        return `${text} {¶=${chNum}}`
       })
     }
   }
