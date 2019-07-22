@@ -434,36 +434,43 @@ OceanMarkdown.prototype.numberVerses = function() {
   // Just exit if there is nothing to replace
   if (!this.opts.chPattern && !this.opts.vPattern) return this
 
-  let numberBooks = (this.opts.bkPattern && /^\$\d$/.test(this.opts.chNumberPosition))
-  let numberChapters = (this.opts.chPattern && /^\$\d$/.test(this.opts.chNumberPosition))
+  let numberBooks = (this.opts.bkPattern && /^(?:\$\d|auto)$/.test(this.opts.chNumberPosition))
+  let numberChapters = (this.opts.chPattern && /^(?:\$\d|auto)$/.test(this.opts.chNumberPosition))
+  let vNum = 0
+  let vRepl = this.opts.vReplacement
 
-  let vNum = parseInt(this.opts.vNumberPosition.replace('$', ''))
-  let vRepl = (this.opts.vReplacement ? this.opts.vReplacement : (this.opts.vPattern.match(/(?:(?:[^\\]|(?:\\{2})+)\(|{(?:\*|pg|fn)})/g) || []).reduce((t,v,i,a) => {
-    if (vNum === i+1) return t
-    return t + '$' + (i+1)
-  }, ''))
-  if (this.opts.vPattern && /^\$\d$/.test(this.opts.vNumberPosition)) {
+  if (/\$\d/.test(this.opts.vNumberPosition)) {
+    vNum = parseInt(this.opts.vNumberPosition.replace('$', ''))
+    vRepl = (this.opts.vReplacement ? this.opts.vReplacement : (this.opts.vPattern.match(/(?:(?:[^\\]|(?:\\{2})+)\(|{(?:\*|pg|fn)})/g) || []).reduce((t,v,i,a) => {
+      if (vNum === i+1) return t
+      return t + '$' + (i+1)
+    }, ''))
+  }
+  if (this.opts.vPattern && /^(?:\$\d|auto)$/.test(this.opts.vNumberPosition)) {
     let bkNum = ''
     let chNum = ''
-    let vNum = ''
     let bkExp = this.toRegExp(dotall(this.opts.bkPattern), '^', '$', '')
     let chExp = this.toRegExp(dotall(this.opts.chPattern), '^', '$', '')
     let vExp = this.toRegExp(dotall(this.opts.vPattern), '^', '$', '')
     this.content = this.content.split(/\n\n+/gm).reduce((t,v,i,a) => {
       if (numberBooks && bkExp.test(v)) {
-        bkNum = v.replace(bkExp, this.opts.bkNumberPosition).replace(/\$/g, '\\$')
+        if (this.opts.bkNumberPosition === 'auto') bkNum++
+        else bkNum = v.replace(bkExp, this.opts.bkNumberPosition).replace(/\$/g, '\\$')
         if (this.opts.bkNumberFromText) bkNum = require('words-to-numbers').wordsToNumbers(bkNum).toString()
         else if (this.opts.bkNumberFromRoman) bkNum = this.fromRoman(bkNum).toString()
         if (this.opts.bkReplacement && this.opts.bkReplacement !== '$&') return t + '\n\n' + v.replace(bkExp, this.opts.bkReplacement.replace(this.opts.bkNumberPosition, bkNum))
       }
       if (numberChapters && chExp.test(v)) {
-        chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
+        if (this.opts.chNumberPosition === 'auto') chNum++
+        else chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
         else if (this.opts.chNumberFromRoman) chNum = this.fromRoman(chNum).toString()
         if (this.opts.chReplacement && this.opts.chReplacement !== '$&') return t + '\n\n' + v.replace(chExp, this.opts.chReplacement.replace(this.opts.chNumberPosition, chNum))
+        if (this.opts.vNumberPosition === 'auto') vNum = 0
       }
       else if (vExp.test(v)) {
-        vNum = v.replace(vExp, this.opts.vNumberPosition)
+        if (this.opts.vNumberPosition === 'auto') vNum++
+        else vNum = v.replace(vExp, this.opts.vNumberPosition)
         if (this.opts.vNumberFromText) vNum = require('words-to-numbers').wordsToNumbers(vNum).toString()
         else if (this.opts.vNumberFromRoman) vNum = this.fromRoman(vNum).toString()
         return t + '\n\n' + v.replace(vExp, vRepl + ` {¶=${bkNum}${(bkNum.length && this.opts.bkSeparator || '')}${chNum}${(chNum.length && this.opts.chSeparator || '')}${vNum}}`)
