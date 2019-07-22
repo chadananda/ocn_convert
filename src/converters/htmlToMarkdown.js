@@ -17,6 +17,7 @@ class HtmlToMarkdown extends Converter {
       subLinkUrlPattern: '/^[^#]+$/',
       subLinkAllowParents: false,
       subLinkDepth: 1,
+      parseIndexPages: false,
       getSubLinks: false,
       convertTables: true,
       collapseTableCells: true,
@@ -148,18 +149,19 @@ HtmlToMarkdown.prototype.prepareMeta = function() {
 
 HtmlToMarkdown.prototype.prepareContent = function() {
   this.prepareMeta()
-  if (this.subTexts.length) {
-    this.content = this.subTexts.join("\n\n* * *\n\n")
-  }
-  else {
+  this.content = ''
+  if (!this.subTexts.length || this.opts.parseIndexPages) {
     let html = this.$(this.opts.contentElement).toArray().map(e => this.$.html(this.$(e))).join('')
     if (html) {
       this.content = this.toMd.turndown( html )
     }
     else {
       this.content = ''
-      console.warn(`No content in "${this.opts.contentElement}" at ${this.meta.sourceUrl}`)
+      if (!this.subTexts.length) console.warn(`No content in "${this.opts.contentElement}" at ${this.meta.sourceUrl}`)
     }
+  }
+  if (this.subTexts.length) {
+    this.content += "\n\n* * *\n\n" + this.subTexts.join("\n\n* * *\n\n")
   }
   return this
 }
