@@ -9,6 +9,7 @@ const converters = require('./index')
 const Sema = require('async-sema')
 const s = new Sema(4)
 const { URL } = require('url')
+const fs = require('fs')
 const args = require('minimist')(process.argv.slice(2), {
   boolean: [
     'a',
@@ -44,6 +45,7 @@ const args = require('minimist')(process.argv.slice(2), {
     'path',
     'fromEncoding',
     'E',
+    'spider',
   ],
   alias: {
     fixMeta: 'fixmeta',
@@ -93,7 +95,17 @@ if (args.a) {
   }
 }
 
-if (args.help || args.h || args['?'] || !args._[0]) {
+let spiderOpts = {}
+if (args.spider && typeof args.spider === 'string') {
+  let spiderFile = path.resolve(process.cwd(), args.spider)
+  if (fs.existsSync(spiderFile)) {
+    let spiderText = fs.readFileSync(spiderFile, 'utf8')
+    const yaml = require('js-yaml')
+    spiderOpts = yaml.load(spiderText)
+  }
+}
+
+if (args.help || args.h || args['?'] || (!args._[0] && !spiderOpts.url)) {
   console.log(`
 Usage: ocean-convert [options] pathOrUrl [pathOrUrl...]
 
@@ -112,6 +124,7 @@ General options:
                       (creates id and word count, and updates old fields)
 --fixMeta             attempt to fix metadata from a broken file
 --verbose, -v         output debug info to terminal
+--spider              a file for spider options
 
 Conversion options:
 --bahai, -b           correct Bahá'í words (default) - use to override previous
@@ -174,10 +187,10 @@ if (opts.o && !sh.test('-e', opts.o)) {
 }
 
 if (opts.spider) {
-  let spiderName = (typeof opts.spider === 'string' ? './spiders/custom/' + opts.spider : './spiders')
-  let Spider = require(spiderName)
+  let Spider = require('./spiders')
+  if (spiderOpts.url) opts.inputFiles = Array.isArray(spiderOpts.url) ? spiderOpts.url : [spiderOpts.url]
   for (filePath of opts.inputFiles) {
-    let fileOpts = Object.assign({}, opts)
+    let fileOpts = Object.assign({}, opts, spiderOpts)
     try {
       let spider = new Spider(filePath, fileOpts)
     }
