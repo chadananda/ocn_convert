@@ -109,7 +109,7 @@ class OceanSpider extends Spider {
     }
     if (tests.statusCode && tests.existingFile && tests.urlFilter && tests.linkDepth && tests.docFilter) {
       if (!sh.test('-d', path.dirname(fileName))) sh.mkdir('-p', path.dirname(fileName))
-      let meta = { sourceUrl: href, _convertedFrom: href, _converstionOpts: {reconvert: true} }
+      let meta = { sourceUrl: href, _convertedFrom: href, _conversionOpts: { reconvert: true, ...(this.opts._conversionOpts || {}) } }
       if (this.opts.converter) meta._conversionOpts = {converter: this.opts.converter}
       writeFileSync(fileName, matter.stringify('', meta))
     }
