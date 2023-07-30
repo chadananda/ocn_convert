@@ -100,29 +100,20 @@ class OceanSpider extends Spider {
     }
 
     // SAVE DOCUMENT ============================
-    console.log({
-      fileName,
-      statusCode: doc.res.statusCode,
-      exists: !sh.test('-e', fileName),
-      filters: this._filterUrl(url, 'doc'),
-      url,
-      linkDepth,
-      minLinkDepth: this.opts.minLinkDepth,
-      docFilter: this.docFilter(doc)
-    })
-    if (
-      doc.res.statusCode === 200 && // Check that the status was not an error
-      !sh.test('-e', fileName) && // Ensure that the filename does not already exist
-      this._filterUrl(url, 'doc') && // Ensure that the document's url is one that should be scraped
-      linkDepth >= this.opts.minLinkDepth && // Ensure that the link depth is at least the minimum
-      this.docFilter(doc) // Pass through the final filter
-    ) {
+    let tests = {
+      statusCode: doc.res.statusCode === 200, // Check that the status was not an error
+      existingFile: !sh.test('-e', fileName), // Ensure that the filename does not already exist
+      urlFilter: this._filterUrl(url, 'doc'), // Ensure that the document's url is one that should be scraped
+      linkDepth: linkDepth >= this.opts.minLinkDepth, // Ensure that the link depth is at least the minimum
+      docFilter: this.docFilter(doc) // Pass through the final filter
+    }
+    if (tests.statusCode && tests.existingFile && tests.urlFilter && tests.linkDepth && tests.docFilter) {
       if (!sh.test('-d', path.dirname(fileName))) sh.mkdir('-p', path.dirname(fileName))
       let meta = { sourceUrl: href, _convertedFrom: href, _converstionOpts: {reconvert: true} }
       if (this.opts.converter) meta._conversionOpts = {converter: this.opts.converter}
-      console.log({ fileName, ...meta })
       writeFileSync(fileName, matter.stringify('', meta))
     }
+    else console.log(`Skipping ${fileName}:`, Object.keys(tests).filter(t => !tests[t]).join(', '))
   }
 
   _request(opts, done) {
