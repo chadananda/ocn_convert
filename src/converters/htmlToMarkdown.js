@@ -25,9 +25,13 @@ class HtmlToMarkdown extends Converter {
       multilineFootnotes: false,
       contentElement: 'body',
       downloadImages: false,
+      removeHashLinks: true,
+      fnRefEl: '',
+      fnTextEl: '',
+      ignoreElements: '',
       metaElements: {
         title: 'title',
-        author: '',
+        author: 'author',
       },
     })
     if (this.opts.singleLevel) this.opts.subLinkDepth = 1
@@ -40,6 +44,13 @@ class HtmlToMarkdown extends Converter {
     }
     this.mergeAllOptions(opts)
     this.$ = cheerio.load(this.raw)
+
+    this.opts.ignoreElements.split(/\s*,\s*/).forEach(e => this.$(e).remove())
+
+    if (this.opts.fnRefEl && this.opts.fnTextEl) {
+      this.$(this.opts.fnRefEl.toString()).addClass('is-footnote')
+      this.$(this.opts.fnTextEl.toString()).addClass('is-footnote').addClass('footnote-text')
+    }
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove(['script', 'iframe'])
@@ -77,6 +88,19 @@ class HtmlToMarkdown extends Converter {
       }
     }
 
+    if (this.opts.fnRefEl && this.opts.fnTextEl) {
+      this.toMd.addRule('footnotes', {
+        filter: function (node, options) {
+          return node.classList.contains('is-footnote')
+        },
+        replacement: function(content, node, options) {
+          let res = `[^${content}]`
+          if (node.classList.contains('footnote-text')) res += ': '
+          return res
+        }
+      })
+    }
+
     // Use absolute references for links and images
     this.toMd.addRule('absoluteLinks', {
       filter: function (node, options) {
@@ -90,6 +114,7 @@ class HtmlToMarkdown extends Converter {
         if (!/^#/.test(href)) {
           href = new URL(node.getAttribute('href'), this.url).toString()
         }
+        else if (this.opts.removeHashLinks) return content
         let title = node.title ? ' "' + node.title + '"' : ''
         return '[' + content + '](' + href + title + ')'
       }.bind(this)
