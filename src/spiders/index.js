@@ -10,6 +10,7 @@ const cachedRequest = require('cached-request')(request)
 cachedRequest.setCacheDirectory(__dirname + '/../../cache')
 cachedRequest.setValue('ttl', (60*60*24*30*1000))
 const sh = require('shelljs')
+const toRegExp = require('../tools/toRegExp')
 const tr = require('transliteration').slugify
 
 class OceanSpider extends Spider {
@@ -19,6 +20,7 @@ class OceanSpider extends Spider {
       // OPTIONS FOR LINKS TO FOLLOW
       selector: 'a', // Any cheerio selector for the links to follow
       linkText: '', // RegExp text for links to follow
+      linkReplacements: undefined,
       followExtFilter: opts.extFilter || 'htm,html,xhtml,asp,php,none',
       followUrlFilter: opts.urlFilter || false,
       followAllowQuery: opts.allowQuery || true, // Whether to follow links with a querystring
@@ -49,6 +51,7 @@ class OceanSpider extends Spider {
       minLinkDepth: 1, // The minimum link depth at which to begin saving documents
       maxLinkDepth: 0, // The maximum link depth to spider (0 = infinite)
       // FILENAME OPTIONS
+      dir: '',
       fileNameElement: 'title',
       fileNamePattern: '',
       // BASE SPIDER OPTIONS
@@ -86,7 +89,7 @@ class OceanSpider extends Spider {
     ) {
       let links = doc.$(this.opts.selector || 'a')
       if (this.opts.linkText) {
-        let linkText = new RegExp(this.opts.linkText)
+        let linkText = toRegExp(this.opts.linkText)
         links = links.filter((i,e) => {
           return linkText.test(doc.$(e).text())
         })
@@ -94,6 +97,11 @@ class OceanSpider extends Spider {
       links = links.get().map(v => new URL(v.attribs.href, doc.url)).filter(this._filterUrl, this)
       for (let url of links) {
         let href = url.href
+        if (this.opts.linkReplacements) {
+          Object.entries(this.opts.linkReplacements).forEach(([k,v]) => {
+            href = href.replace(toRegExp(k), v)
+          })
+        }
         this.linkDepth[href] = Math.min(linkDepth + 1, (this.linkDepth[href] || 1001))
         this.queue(href, this._process)
       }
@@ -180,7 +188,11 @@ class OceanSpider extends Spider {
   }
 
   _getPath() {
-    return this.opts.p || this.opts.o || fp.resolve('.')
+    if (this.opts.p) return this.opts.p
+    if (this.opts.o) return [this.opts.o, this.opts.dir].join('/')
+    let p = fp.resolve('.')
+    if (!this.opts.dir || p.match(toRegExp(this.opts.dir, '', '$'))) return p
+    return `${p}/${this.opts.dir}`
   }
 
   /**
@@ -193,9 +205,18 @@ class OceanSpider extends Spider {
 
   writeFileName(doc) {
     let name = ''
-    if (this.opts.fileNameElement) name = doc.$(this.opts.fileNameElement).text().replace(/[:\?\\\*"<>\|!]/g, '') || ''
-    if (this.opts.fileNamePattern) name = (name.match(new RegExp(this.opts.fileNamePattern)) || []).slice(1).join() || name
-    name = (name ? name + '.md' : fp.urlToFilename(doc.url))
+    if (this.opts.fileNameElement) {
+      let els = Array.isArray(this.opts.fileNameElement) ? this.opts.fileNameElement : [this.opts.fileNameElement]
+      name = els.map(el => {
+        if (el === 'url') return fp.urlToFilename(doc.url).replace(/\.md$/,'')
+        return el.match(/^meta/)
+        ? (doc.$(el).attr('content') || '').replace(/[:\?\\\*"<>\|!]/g, '')
+        : (doc.$(el).text() || '').replace(/[:\?\\\*"<>\|!]/g, '')
+      }).join('-')
+    }
+    else name = fp.urlToFilename(doc.url)
+    if (this.opts.fileNamePattern) name = (name.match(toRegExp(this.opts.fileNamePattern)) || []).slice(1).join() || name
+    if (!name.match(/\.md$/)) name += '.md'
     return `${this.path}/${name}`
   }
 
