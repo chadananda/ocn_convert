@@ -25,6 +25,7 @@ class HtmlToMarkdown extends Converter {
       multilineFootnotes: false,
       contentElement: 'body',
       downloadImages: false,
+      hrEl: '',
       removeHashLinks: true,
       fnRefEl: '',
       fnTextEl: '',
@@ -51,6 +52,8 @@ class HtmlToMarkdown extends Converter {
       this.$(this.opts.fnRefEl.toString()).addClass('is-footnote')
       this.$(this.opts.fnTextEl.toString()).addClass('is-footnote').addClass('footnote-text')
     }
+
+    if (this.opts.hrEl) this.$(this.opts.hrEl.toString()).addClass('is-hr')
 
     this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
       .remove(['script', 'iframe'])
@@ -97,6 +100,17 @@ class HtmlToMarkdown extends Converter {
           let res = `[^${content}]`
           if (node.classList.contains('footnote-text')) res += ': '
           return res
+        }
+      })
+    }
+
+    if (this.opts.hrEl) {
+      this.toMd.addRule('sectionBreaks', {
+        filter: function (node, options) {
+          return node.classList.contains('is-hr')
+        },
+        replacement: function(content) {
+          return '---\n' + content
         }
       })
     }
