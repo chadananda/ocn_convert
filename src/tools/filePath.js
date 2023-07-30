@@ -136,7 +136,7 @@ module.exports = {
       if (typeof doc === 'object' && doc.opts.downloadImages && doc.images.length) {
         await this.downloadImages(doc.images, path.dirname(filePath))
       }
-      await writeFile(filePath, doc)
+      await writeFile(filePath, doc.toString())
       console.log(`Wrote "${filePath}"`)
     }
     else {
