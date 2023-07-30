@@ -39,7 +39,7 @@ class OceanSpider extends Spider {
       // OPTIONS FOR LINKS TO SAVE AS DOCUMENTS
       docExtFilter: opts.extFilter || 'htm,html,xhtml,asp,php,txt,md,none',
       docUrlFilter: opts.urlFilter || '',
-      docAllowQuery: opts.allowQuery || false,
+      docAllowQuery: opts.allowQuery || true,
       docAllowHash: opts.allowHash || false,
       docAllowParents: opts.allowParents || false,
       docAllowExternal: opts.allowExternal || false,
@@ -100,6 +100,16 @@ class OceanSpider extends Spider {
     }
 
     // SAVE DOCUMENT ============================
+    console.log({
+      fileName,
+      statusCode: doc.res.statusCode,
+      exists: !sh.test('-e', fileName),
+      filters: this._filterUrl(url, 'doc'),
+      url,
+      linkDepth,
+      minLinkDepth: this.opts.minLinkDepth,
+      docFilter: this.docFilter(doc)
+    })
     if (
       doc.res.statusCode === 200 && // Check that the status was not an error
       !sh.test('-e', fileName) && // Ensure that the filename does not already exist
@@ -110,6 +120,7 @@ class OceanSpider extends Spider {
       if (!sh.test('-d', path.dirname(fileName))) sh.mkdir('-p', path.dirname(fileName))
       let meta = { sourceUrl: href, _convertedFrom: href, _converstionOpts: {reconvert: true} }
       if (this.opts.converter) meta._conversionOpts = {converter: this.opts.converter}
+      console.log({ fileName, ...meta })
       writeFileSync(fileName, matter.stringify('', meta))
     }
   }
