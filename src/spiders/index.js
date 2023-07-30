@@ -1,5 +1,5 @@
-const Spider = require('node-spider')
-const Document = require('node-spider/lib/document')
+const Spider = require('./node-spider')
+const Document = require('./node-spider-document')
 const matter = require('gray-matter')
 const writeFileSync = require('fs').writeFileSync
 const fp = require('../tools/filePath')
@@ -43,8 +43,8 @@ class OceanSpider extends Spider {
       docAllowHash: opts.allowHash || false,
       docAllowParents: opts.allowParents || false,
       docAllowExternal: opts.allowExternal || false,
-      docMinPathDepth: opts.minPathDepth || 0, 
-      docMaxPathDepth: opts.maxPathDepth || 100, 
+      docMinPathDepth: opts.minPathDepth || 0,
+      docMaxPathDepth: opts.maxPathDepth || 100,
       // LINK DEPTH OPTIONS
       minLinkDepth: 1, // The minimum link depth at which to begin saving documents
       maxLinkDepth: 0, // The maximum link depth to spider (0 = infinite)
@@ -52,15 +52,15 @@ class OceanSpider extends Spider {
       fileNameElement: 'title',
       fileNamePattern: '',
       // BASE SPIDER OPTIONS
-      concurrent: 1, // How many requests can be run in parallel 
-      delay: 100, // How long to wait after each request 
-      logs: process.stderr, // A stream to where internal logs are sent, optional 
-      allowDuplicates: false, // Re-visit visited URLs, false by default 
-      catchErrors: true, // If `true` all queued handlers will be try-catch'd, errors go to `error` callback 
-      addReferrer: false, // If `true` the spider will set the Referer header automatically on subsequent requests 
-      xhr: false, // If `true` adds the X-Requested-With:XMLHttpRequest header 
-      keepAlive: false, // If `true` adds the Connection:keep-alive header and forever option on request module 
-      //- All options are passed to `request` module, for example: 
+      concurrent: 1, // How many requests can be run in parallel
+      delay: 100, // How long to wait after each request
+      logs: process.stderr, // A stream to where internal logs are sent, optional
+      allowDuplicates: false, // Re-visit visited URLs, false by default
+      catchErrors: true, // If `true` all queued handlers will be try-catch'd, errors go to `error` callback
+      addReferrer: false, // If `true` the spider will set the Referer header automatically on subsequent requests
+      xhr: false, // If `true` adds the X-Requested-With:XMLHttpRequest header
+      keepAlive: false, // If `true` adds the Connection:keep-alive header and forever option on request module
+      //- All options are passed to `request` module, for example:
       headers: { 'user-agent': 'node-spider' },
       encoding: 'utf8'
     }, opts)
@@ -78,7 +78,7 @@ class OceanSpider extends Spider {
     let url = new URL(href)
     let linkDepth = (typeof this.linkDepth[href] === 'number' ? this.linkDepth[href] : 1000)
     let fileName = this.writeFileName(doc)
-  
+
     // SPIDER ===================================
     if (
       (!this.opts.maxLinkDepth || linkDepth < this.opts.maxLinkDepth) && // stop spidering one level beneath maxLinkDepth
@@ -98,7 +98,7 @@ class OceanSpider extends Spider {
         this.queue(href, this._process)
       }
     }
-  
+
     // SAVE DOCUMENT ============================
     if (
       doc.res.statusCode === 200 && // Check that the status was not an error
@@ -119,9 +119,9 @@ class OceanSpider extends Spider {
   }
 
   /**
-   * 
-   * @param {URL} url 
-   * @param {string} mode 
+   *
+   * @param {URL} url
+   * @param {string} mode
    */
   _filterUrl(url, mode = 'follow') {
     mode = (['doc', 'spider'].indexOf(mode) >= 0 ? mode : 'follow')
@@ -182,8 +182,8 @@ class OceanSpider extends Spider {
   }
 
   /**
-   * 
-   * @param {Document} doc 
+   *
+   * @param {Document} doc
    */
   docFilter(doc) {
     return true

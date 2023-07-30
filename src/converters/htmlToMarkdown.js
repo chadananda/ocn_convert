@@ -1,7 +1,7 @@
 const Converter = require('./oceanMarkdown')
 const TurndownService = require('turndown')
 const tables = require('turndown-plugin-gfm').tables
-const cheerio = require('cheerio-advanced-selectors').wrap(require('cheerio'))
+const cheerio = require('cheerio')
 const { URL } = require('url')
 const fp = require('../tools/filePath')
 const Sema = require('async-sema')
@@ -9,7 +9,7 @@ const subLinks = []
 const subLinksProcessed = []
 
 class HtmlToMarkdown extends Converter {
-  constructor(input, opts = {}) {
+  constructor(input = "", opts = {}) {
     super(input, opts)
     this.addDefaultConversionOpts({
       subLinkElement: 'a',
@@ -72,7 +72,7 @@ class HtmlToMarkdown extends Converter {
             // Ensure there are no blank lines
             content = content.replace('\n\n', '\n')
             return '\n\n' + content + '\n\n'
-          }          
+          }
         })
       }
     }
@@ -142,7 +142,8 @@ HtmlToMarkdown.prototype.init = async function() {
 
 HtmlToMarkdown.prototype.prepareMeta = function() {
   Object.keys(this.opts.metaElements).forEach(k => {
-    if (!this.meta[k] && this.opts.metaElements[k]) this.meta[k] = this.$(this.opts.metaElements[k]).attr('content') || this.$(this.opts.metaElements[k]).text().trim() || ''
+    let selector = k === 'title' ? 'title' : `meta[name="${k}"]`
+    if (!this.meta[k] && this.opts.metaElements[k]) this.meta[k] = this.$(selector).attr('content') || this.$(selector).text().trim() || ''
   })
   return this
 }

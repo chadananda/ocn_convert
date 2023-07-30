@@ -1,7 +1,7 @@
 /**
  * @fileOverview
  * Provides a class for creating ocean markdown.
- * 
+ *
  * Meta information reqirements are available in README.md
  */
 const BahaiAutocorrect = require('bahai-autocorrect')
@@ -164,9 +164,9 @@ OceanMarkdown.prototype.init = async function() {
 }
 
   /**
-   * 
+   *
    * @param {stream} stream The stream to be used when preparing content for the OceanMarkdown object
-   * @param {*} opts 
+   * @param {*} opts
    */
 OceanMarkdown.prototype.prepareStream = async function(stream, opts = {}) {
   let textBuffer = await require('raw-body')(stream)
@@ -326,20 +326,6 @@ OceanMarkdown.prototype.convert = function() {
   this.cleanupText().replaceAll(this.opts.prePatterns)
 
   // Execute the conversion functions
-  this._preConvert()
-  this._convert()
-  this._postConvert()
-
-  this.replaceAll(this.opts.postPatterns)
-
-  this.replaceAll(/\n\n+/gm, '\n\n')
-
-  this.checkMeta()
-  return this
-}
-
-OceanMarkdown.prototype._convert = function() {
-
   if (this.opts.correctSoftHyphens) {
     // Soft hyphen words are calculated every time
     this.meta._softHyphenWords = ''
@@ -360,14 +346,12 @@ OceanMarkdown.prototype._convert = function() {
   this.content = this.content.replace(/(\* \* \*\n\n+)+/gm, '* * *\n\n')
   this.content = this.content.replace(this.toRegExp('/( \\{[^\\}]*\\})*(\\n\\n\\* \\* \\*)*\\n\\n(\\[pg {pg}\\])\\n\\n/'), ' $3$1$2\n\n')
   this.content = this.content.replace(/^(\s*\n|\s*\[pg [^\]]+\]\s*\n|\* \* \*\n)+/m, '')
-  return this
-}
 
-OceanMarkdown.prototype._preConvert = function() {
-  return this
-}
+  this.replaceAll(this.opts.postPatterns)
 
-OceanMarkdown.prototype._postConvert = function() {
+  this.replaceAll(/\n\n+/gm, '\n\n')
+
+  this.checkMeta()
   return this
 }
 
@@ -484,7 +468,7 @@ OceanMarkdown.prototype.numberVerses = function() {
     }
     else {
       let chExp = this.toRegExp(this.opts.chPattern, '^', '$')
-      this.content = this.content.replace(chExp, v => {
+      this.content = this.content.replace(chExp, (v) => {
         let chNum = v.replace(chExp, this.opts.chNumberPosition).replace(/\$/g, '\\$')
         let text = v.replace(chExp, this.opts.chReplacement)
         if (this.opts.chNumberFromText) chNum = require('words-to-numbers').wordsToNumbers(chNum).toString()
@@ -609,7 +593,7 @@ OceanMarkdown.prototype.checkMeta = function() {
       this.meta.publicationName = this.meta.source.replace(/, (?:pages?|pg|vol).+/i, '')
     }
     delete this.meta.source
-    
+
     if (typeof this.meta.language === 'undefined') this.meta.language = 'en'
 
     if (typeof this.meta.priority !== 'number') this.meta.priority = 9
@@ -629,7 +613,7 @@ OceanMarkdown.prototype.checkMeta = function() {
     if (typeof this.meta.date === 'number' && this.meta.date < 2050) {
       this.meta.year = this.meta.date
     }
-    else if (this.meta.date && /\d{4}/.test(this.meta.date)) { 
+    else if (this.meta.date && /\d{4}/.test(this.meta.date)) {
       this.meta.year = this.meta.date.match(/(\d{4})/)[1]
     }
     delete this.meta.date
