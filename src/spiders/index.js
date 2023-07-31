@@ -56,6 +56,7 @@ class OceanSpider extends Spider {
       dir: '',
       fileNameElement: 'title',
       fileNamePattern: '',
+      noSlugify: false,
       // BASE SPIDER OPTIONS
       concurrent: 1, // How many requests can be run in parallel
       delay: 100, // How long to wait after each request
@@ -81,7 +82,7 @@ class OceanSpider extends Spider {
     let href = doc.url.toString()
     let url = new URL(href)
     let linkDepth = (typeof this.linkDepth[href] === 'number' ? this.linkDepth[href] : 1000)
-    let fileName = this.writeFileName(doc)
+    let fileName = await this.writeFileName(doc)
 
     // SPIDER ===================================
     if (
@@ -215,7 +216,17 @@ class OceanSpider extends Spider {
     return true
   }
 
-  writeFileName(doc) {
+  async slugify(str) {
+    return (await import('@sindresorhus/slugify'))(str, {
+      customReplacements: [
+        "'","",
+        "‘","",
+        "’","",
+      ]
+    })
+  }
+
+  async writeFileName(doc) {
     let name = ''
     if (this.opts.fileNameElement) {
       let els = Array.isArray(this.opts.fileNameElement) ? this.opts.fileNameElement : [this.opts.fileNameElement]
@@ -228,6 +239,7 @@ class OceanSpider extends Spider {
     }
     else name = fp.urlToFilename(doc.url)
     if (this.opts.fileNamePattern) name = (name.match(toRegExp(this.opts.fileNamePattern)) || []).slice(1).join() || name
+    if (!this.opts.noSlugify) name = await this.slugify(name)
     if (!name.match(/\.md$/)) name += '.md'
     return `${this.path}/${name}`
   }
