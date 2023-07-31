@@ -1,5 +1,7 @@
 var request = require('request'),
-	Doc = require('./node-spider-document');
+	Doc = require('./node-spider-document'),
+	toBuffer = require('raw-body')
+
 
 function Spider(opts) {
 	opts = this.opts = opts || {};
@@ -64,13 +66,14 @@ Spider.prototype = {
 
 			var doc = new Doc(url, res);
 			this.log('Success', url);
-			if (this.opts.catchErrors) {
-				try { done.call(this, doc); }
-				catch (err) { this.error(err, url); }
-			} else {
-				done.call(this, doc);
-			}
-			this.finished(url);
+
+			done.call(this, doc)
+				.then(this.finished(url))
+				.catch(err => {
+					this.error(err, url)
+					this.finished(url)
+				})
+
 		}.bind(this));
 	},
 

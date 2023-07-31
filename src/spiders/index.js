@@ -12,6 +12,8 @@ cachedRequest.setValue('ttl', (60*60*24*30*1000))
 const sh = require('shelljs')
 const toRegExp = require('../tools/toRegExp')
 const tr = require('transliteration').slugify
+const { getConverter } = require('..')
+const mkdirp = require('mkdirp')
 
 class OceanSpider extends Spider {
   constructor(url, opts = {}) {
@@ -59,7 +61,6 @@ class OceanSpider extends Spider {
       delay: 100, // How long to wait after each request
       logs: process.stderr, // A stream to where internal logs are sent, optional
       allowDuplicates: false, // Re-visit visited URLs, false by default
-      catchErrors: true, // If `true` all queued handlers will be try-catch'd, errors go to `error` callback
       addReferrer: false, // If `true` the spider will set the Referer header automatically on subsequent requests
       xhr: false, // If `true` adds the X-Requested-With:XMLHttpRequest header
       keepAlive: false, // If `true` adds the Connection:keep-alive header and forever option on request module
@@ -76,7 +77,7 @@ class OceanSpider extends Spider {
     this.queue(url, this._process)
   }
 
-  _process(doc) {
+  async _process(doc) {
     let href = doc.url.toString()
     let url = new URL(href)
     let linkDepth = (typeof this.linkDepth[href] === 'number' ? this.linkDepth[href] : 1000)
@@ -117,9 +118,20 @@ class OceanSpider extends Spider {
     }
     if (tests.statusCode && tests.existingFile && tests.urlFilter && tests.linkDepth && tests.docFilter) {
       if (!sh.test('-d', path.dirname(fileName))) sh.mkdir('-p', path.dirname(fileName))
-      let meta = { sourceUrl: href, _convertedFrom: href, _conversionOpts: { reconvert: true, ...(this.opts._conversionOpts || {}) } }
-      if (this.opts.converter) meta._conversionOpts = {converter: this.opts.converter}
-      writeFileSync(fileName, matter.stringify('', meta))
+      let converterOpts = { sourceUrl: href, _convertedFrom: href, _conversionOpts: { reconvert: true, ...(this.opts._conversionOpts || {}) } }
+      let newDoc = await getConverter('html', doc.body, converterOpts)
+
+      newDoc.convert()
+
+      if (newDoc.metaErrors.length) {
+        process.exitCode = 1
+        console.error(`${fileName} has bad/missing metadata (${(doc.metaErrors || []).join(', ')})`)
+      }
+
+      // force directory (like mkdir -p)
+      mkdirp.sync(path.dirname(fileName))
+      await fp.writeFile(fileName, newDoc, 'utf8')
+
     }
     else console.log(`Skipping ${fileName}:`, Object.keys(tests).filter(t => !tests[t]).join(', '))
   }

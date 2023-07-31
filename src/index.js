@@ -16,21 +16,21 @@ for (let f of sh.find(path.join(__dirname, 'converters'))) {
  * text: The TextToMarkdown converter, for converting plain text to Ocean Markdown
  * html: The HtmlToMarkdown converter, for converting html to Ocean Markdown
  * custom: A custom converter that extends OceanMarkdown and resides in src/converters/.../customToMarkdown.js
- * @param {stream} stream A stream of data, such as might be obtained from fs.createReadStream() or request().
+ * @param {stream|Buffer} data A stream or buffer of data, such as might be obtained from fs.createReadStream() or request().
  * @param {object} opts A set of options and metadata for the conversion object.
  */
-async function getConverter(contentType, stream, opts = {}) {
+async function getConverter(contentType, data, opts = {}) {
   let text
   // console.log(contentType)
+  let fileOpts = Object.assign({}, opts, {encoding: null})
   if (opts.M) { // JUST WORK ON EXISTING FILE
-    let fileOpts = Object.assign({}, opts, {encoding: null})
-    text = await Converters['text'].prototype.prepareStream(stream, fileOpts)
+    text = await Converters['text'].prototype.prepareStream(data, fileOpts)
     converter = new Converters['text'](text.content, opts)
     converter.prepareContent()
     return converter
   }
   else { // Work on original content
-    text = await Converters[contentType].prototype.prepareStream(stream, opts)
+    text = await Converters[contentType].prototype.prepareStream(data, fileOpts)
     opts.encoding = text.encoding
     let converter = new Converters[contentType](text.content, opts)
     await converter.init()

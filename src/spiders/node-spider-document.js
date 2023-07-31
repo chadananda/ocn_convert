@@ -4,6 +4,7 @@ var cheerio = require('cheerio'),
 function Document(url, res) {
 	this.url = url;
 	this.res = res;
+	this.body = this.res.body
 }
 
 Document.prototype = {
@@ -11,7 +12,7 @@ Document.prototype = {
 
 	// Lazy parse
 	get $() {
-		return this._$ || (this._$ = cheerio.load(this.res.body));
+		return this._$ || (this._$ = cheerio.load(this.body));
 	},
 
 	resolve: function(uri) {

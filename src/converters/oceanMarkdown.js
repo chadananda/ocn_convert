@@ -165,11 +165,12 @@ OceanMarkdown.prototype.init = async function() {
 
   /**
    *
-   * @param {stream} stream The stream to be used when preparing content for the OceanMarkdown object
+   * @param {stream|Buffer} data The stream to be used when preparing content for the OceanMarkdown object
    * @param {*} opts
    */
-OceanMarkdown.prototype.prepareStream = async function(stream, opts = {}) {
-  let textBuffer = await require('raw-body')(stream)
+OceanMarkdown.prototype.prepareStream = async function(data, opts = {}) {
+
+  let textBuffer = Buffer.isBuffer(data) ? data : await require('raw-body')(data)
 
   encoding = (typeof opts.encoding === 'string' ? opts.encoding : chardet.detect(textBuffer))
 
@@ -182,6 +183,7 @@ OceanMarkdown.prototype.prepareStream = async function(stream, opts = {}) {
 OceanMarkdown.prototype.mergeAllOptions = function(opts) {
   // Set conversion options for saving
   this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts || {}, opts || {})
+  this.meta._conversionOpts = this.mergeOptions(this.meta._conversionOpts || {}, opts._conversionOpts || {})
   // Get the full list of options for conversion
   this.opts = this.mergeOptions(this.defaultConversionOpts, this.meta._conversionOpts || {})
 }
