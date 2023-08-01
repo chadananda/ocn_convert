@@ -506,7 +506,7 @@ OceanMarkdown.prototype.fromRoman = function(text) {
 
 OceanMarkdown.prototype.correctBahaiWords = function() {
   let bahaiAutocorrect = new BahaiAutocorrect(this.content, false, this.debug)
-  this.content = bahaiAutocorrect.correct().toString()
+  this.content = bahaiAutocorrect.correct().toString().replace(/-‑/g, '‑') // @todo: fix this hash when bahai-autocorrect is updated
   if (this.debug) {
     this.debugInfo.bahai = [...new Set(bahaiAutocorrect.diff.split('\n'))]
   }
@@ -650,10 +650,10 @@ OceanMarkdown.prototype.checkMeta = function() {
   for (let k of ['author', 'title']) {
     if (typeof this.meta[k] === 'undefined') this.setMetaError(k)
     else if (typeof this.meta[k] === 'string' && this.meta[k]) {
-      this.meta[k] = new BahaiAutocorrect(this.meta[k]).correct().stripUnderlines().toString()
+      this.meta[k] = new BahaiAutocorrect(this.meta[k]).correct().stripUnderlines().toString().replace(/-‑/g, '‑')
     }
     else if (Array.isArray(this.meta[k]) && this.meta[k].length) {
-      this.meta[k] = this.meta[k].map(v => { return new BahaiAutocorrect(v).correct().stripUnderlines().toString() })
+      this.meta[k] = this.meta[k].map(v => { return new BahaiAutocorrect(v).correct().stripUnderlines().toString().replace(/-‑/g, '‑') })
     }
     else {
       this.setMetaError(k)
