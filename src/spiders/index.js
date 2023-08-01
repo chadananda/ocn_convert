@@ -216,16 +216,6 @@ class OceanSpider extends Spider {
     return true
   }
 
-  async slugify(str) {
-    return (await import('@sindresorhus/slugify'))(str, {
-      customReplacements: [
-        ["'",""],
-        ["‘",""],
-        ["’",""],
-      ]
-    })
-  }
-
   async writeFileName(doc) {
     let name = ''
     if (this.opts.fileNameElement) {
@@ -245,7 +235,7 @@ class OceanSpider extends Spider {
   }
 
   slugify(text) {
-    return tr(text)
+    return tr(text.replace(/['‘’`]/g, ""))
   }
 
 }
