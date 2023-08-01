@@ -158,7 +158,7 @@ class OceanSpider extends Spider {
     if (!this.opts[mode + 'AllowExternal'] && url.hostname !== this.baseURL.hostname) return false
     if (!this.opts[mode + 'AllowParents'] && urlDirname.indexOf(baseDirname) !== 0) return false
     if (this[mode + 'ExtFilter'].length && this[mode + 'ExtFilter'].indexOf(urlExtname) === -1) return false
-    if (this[mode + 'UrlFilter'] && url.href.split(this[mode + 'UrlFilter']).length < 2) return false
+    if (this[mode + 'UrlFilter'] && !url.href.match(toRegExp(this[mode + 'UrlFilter']))) return false
     if (!(this.opts[mode + 'MinPathDepth'] <= pathDepth <= this.opts[mode + 'MaxPathDepth'])) return false
     return true
   }
