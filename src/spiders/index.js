@@ -219,9 +219,9 @@ class OceanSpider extends Spider {
   async slugify(str) {
     return (await import('@sindresorhus/slugify'))(str, {
       customReplacements: [
-        "'","",
-        "‘","",
-        "’","",
+        ["'",""],
+        ["‘",""],
+        ["’",""],
       ]
     })
   }
