@@ -55,7 +55,7 @@ class HtmlToMarkdown extends Converter {
 
     if (this.opts.hrEl) this.$(this.opts.hrEl.toString()).addClass('is-hr')
 
-    this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*'})
+    this.toMd = new TurndownService({headingStyle: 'atx', emDelimiter: '*', codeBlockStyle: 'fenced'})
       .remove(['script', 'iframe'])
 
     this.images = []
@@ -147,6 +147,54 @@ class HtmlToMarkdown extends Converter {
         let titlePart = title ? ' "' + title + '"' : ''
         return src ? `![${alt}](${src}${titlePart})` : ''
       }.bind(this)
+    })
+    .addRule('list', {
+      filter: ['ul', 'ol'],
+
+      replacement: function (content, node) {
+        var parent = node.parentNode
+
+        // CHANGE: Allow for <ul> and <ol> that are improperly nested outside of <li>.
+        if (node.parentNode.nodeName.match(/^(UL|OL)$/i)) {
+          content = '    ' + content
+            .replace(/^\n+/, '') // remove leading newlines
+            .replace(/\n+$/, '\n') // replace trailing newlines with just a single one
+            .replace(/\n/gm, '\n    ') // indent
+        }
+
+        if (parent.nodeName === 'LI' && parent.lastElementChild === node) {
+          return '\n' + content
+        } else {
+          return '\n\n' + content + '\n\n'
+        }
+      }
+    })
+    .addRule('listItem', {
+      filter: 'li',
+
+      replacement: function (content, node, options) {
+        content = content
+          .replace(/^\n+/, '') // remove leading newlines
+          .replace(/\n+$/, '\n') // replace trailing newlines with just a single one
+          .replace(/\n/gm, '\n    ') // indent
+
+        var prefix = options.bulletListMarker + '   '
+        var parent = node.parentNode
+
+        // CHANGE: Don't output two markers if there is an empty li.
+        if (node.children.length === 1 && node.children[0].nodeName.match(/^(UL|OL)$/i) && node.textContent === node.children[0].textContent ) prefix = '    '
+
+        else if (parent.nodeName === 'OL') {
+          var start = parent.getAttribute('start')
+          // CHANGE: When <ol> is improperly nested outside of <li>, get the numbering correct.
+          var index = Array.prototype.indexOf.call(Array.prototype.filter.call(parent.children, el => el.nodeName === 'LI'), node)
+          prefix = (start ? Number(start) + index : index + 1) + '.  '
+        }
+
+        return (
+          prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
+        )
+      }
     })
 
     this.subLinks = []
