@@ -229,7 +229,7 @@ HtmlToMarkdown.prototype.init = async function() {
 
 HtmlToMarkdown.prototype.prepareMeta = function() {
   Object.keys(this.opts.metaElements).forEach(k => {
-    this.meta[k] = (k === 'title' ? this.$('title').text().trim() : this.$(`meta[name='${this.opts.metaElements[k]}']`).attr('content')) || this.opts.id || ''
+    this.meta[k] = (k === 'title' ? this.$('title').text().trim() : this.$(`meta[name='${this.opts.metaElements[k]}']`).attr('content')) || this.opts.metaElements[k] || this.opts.id || ''
   })
   return this
 }
